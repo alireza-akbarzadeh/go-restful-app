@@ -9,6 +9,7 @@ import (
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/sqlite3"
 	"github.com/golang-migrate/migrate/source/file"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 
 	direction := os.Args[1]
 
-	db, err := sql.Open("sqlite3", "./data.db")
+	db, err := sql.Open("sqlite", "./data.db")
 	if err != nil {
 		log.Fatal(err)
 	}

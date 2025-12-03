@@ -7,7 +7,7 @@ import (
 	"github.com/alireza-akbarzadeh/restful-app/internal/database"
 	"github.com/alireza-akbarzadeh/restful-app/internal/env"
 	_ "github.com/joho/godotenv/autoload"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type application struct {
@@ -17,10 +17,14 @@ type application struct {
 }
 
 func main() {
-	db, err := sql.Open("sqlite3", "./data.db")
+	db, err := sql.Open("sqlite", "./data.db")
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err = db.Ping(); err != nil {
+		log.Fatal("Could not connect to database: ", err)
+	}
+	log.Println("Successfully connected to data.db")
 
 	defer db.Close()
 

@@ -36,7 +36,7 @@ func (app *application) registerUser(c *gin.Context) {
 	}
 	_, err = app.models.Users.Insert(&user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": messages.ErrFailedToRegisterUser})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": messages.ErrFailedToRegisterUser, "details": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, user)
