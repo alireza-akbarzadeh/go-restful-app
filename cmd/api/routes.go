@@ -6,6 +6,12 @@ import (
 
 func (app *application) routes() *gin.Engine {
 	g := gin.Default()
+
+	// Health check endpoint
+	g.GET("/api/hello", func(c *gin.Context) {
+		c.String(200, "hello world")
+	})
+
 	v1 := g.Group("/api/v1")
 	{
 		v1.POST("/events", app.createEvent)
@@ -15,7 +21,6 @@ func (app *application) routes() *gin.Engine {
 		v1.DELETE("/events/:id", app.deleteEvent)
 
 		v1.POST("/auth/register", app.registerUser)
-
 	}
 
 	return g
