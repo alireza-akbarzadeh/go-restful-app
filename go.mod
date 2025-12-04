@@ -1,4 +1,4 @@
-module github.com/alireza-akbarzadeh/restful-app
+module github.com/alireza-akbarzadeh/ginflow
 
 go 1.25.0
 

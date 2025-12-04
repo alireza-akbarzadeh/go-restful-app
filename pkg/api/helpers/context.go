@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"github.com/alireza-akbarzadeh/restful-app/pkg/repository"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/repository"
 	"github.com/gin-gonic/gin"
 )
 

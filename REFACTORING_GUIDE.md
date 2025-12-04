@@ -127,12 +127,12 @@ The new import paths:
 "github.com/alireza-akbarzadeh/restful-app/internal/env"
 
 // New
-"github.com/alireza-akbarzadeh/restful-app/pkg/repository"
-"github.com/alireza-akbarzadeh/restful-app/pkg/config"
-"github.com/alireza-akbarzadeh/restful-app/pkg/api/handlers"
-"github.com/alireza-akbarzadeh/restful-app/pkg/api/middleware"
-"github.com/alireza-akbarzadeh/restful-app/pkg/api/routers"
-"github.com/alireza-akbarzadeh/restful-app/pkg/api/helpers"
+"github.com/alireza-akbarzadeh/ginflow/pkg/repository"
+"github.com/alireza-akbarzadeh/ginflow/pkg/config"
+"github.com/alireza-akbarzadeh/ginflow/pkg/api/handlers"
+"github.com/alireza-akbarzadeh/ginflow/pkg/api/middleware"
+"github.com/alireza-akbarzadeh/ginflow/pkg/api/routers"
+"github.com/alireza-akbarzadeh/ginflow/pkg/api/helpers"
 ```
 
 ### Step 4: Build and Test

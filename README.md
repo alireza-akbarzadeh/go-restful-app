@@ -1,6 +1,6 @@
-# Go RESTful API - Event Management System
+# GinFlow - Modern Go API Framework
 
-A RESTful API built with Go for managing events and attendees. Perfect for learning Go web development with best practices and clean architecture.
+A modern RESTful API framework built with Go and Gin for managing events and attendees. Perfect for learning Go web development with best practices and clean architecture.
 
 ## 📋 Table of Contents
 
@@ -80,8 +80,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/alireza-akbarzadeh/go-restful-app.git
-cd go-restful-app
+git clone https://github.com/alireza-akbarzadeh/ginflow.git
+cd ginflow
 ```
 
 ### 2. Quick Setup

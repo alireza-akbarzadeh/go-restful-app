@@ -3,10 +3,10 @@ package routers
 import (
 	"html/template"
 
-	"github.com/alireza-akbarzadeh/restful-app/pkg/api/handlers"
-	"github.com/alireza-akbarzadeh/restful-app/pkg/api/middleware"
-	"github.com/alireza-akbarzadeh/restful-app/pkg/repository"
-	"github.com/alireza-akbarzadeh/restful-app/pkg/web"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/api/handlers"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/api/middleware"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/repository"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/web"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -15,7 +15,7 @@ import (
 // SetupRouter configures and returns the main router
 func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *repository.UserRepository) *gin.Engine {
 	router := gin.Default()
-	router.SetHTMLTemplate(template.Must(template.ParseFS(web.Templates, "*.html")))
+	router.SetHTMLTemplate(template.Must(template.ParseFS(web.Templates, "components/*.html", "pages/*.html")))
 
 	// Root landing page
 	router.GET("/", handler.ShowLandingPage)

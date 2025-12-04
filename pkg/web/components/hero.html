@@ -1,0 +1,109 @@
+{{ define "hero" }}
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden hero-gradient">
+        <!-- Background Elements -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 2s;"></div>
+        </div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
+                <!-- Left Content -->
+                <div class="text-center lg:text-left">
+                    <!-- Badge -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8 animate-fade-in">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span class="text-sm font-medium text-slate-600">System Online</span>
+                        <span class="text-slate-300">•</span>
+                        <span class="text-sm font-semibold text-blue-600">PostgreSQL Connected</span>
+                    </div>
+                    
+                    <!-- Headline -->
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 animate-slide-up">
+                        Modern API
+                        <span class="block mt-2 gradient-text">Framework</span>
+                        <span class="block mt-2 text-slate-900">Built with Go & Gin</span>
+                    </h1>
+                    
+                    <!-- Description -->
+                    <p class="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed animate-slide-up" style="animation-delay: 0.1s;">
+                        A robust RESTful API framework featuring JWT authentication, Swagger documentation, and a responsive dashboard. Built for developers who value clean code and performance.
+                    </p>
+                    
+                    <!-- CTA Buttons -->
+                    <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-slide-up" style="animation-delay: 0.2s;">
+                        <a href="/dashboard" class="group inline-flex items-center justify-center px-8 py-4 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 hover:shadow-slate-900/30 hover:-translate-y-0.5">
+                            <span>Open Dashboard</span>
+                            <svg class="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </a>
+                        <a href="/swagger/index.html" class="group inline-flex items-center justify-center px-8 py-4 bg-white text-slate-900 font-semibold rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm">
+                            <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span>API Docs</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Right Content - Code Preview -->
+                <div class="mt-16 lg:mt-0 animate-slide-up" style="animation-delay: 0.2s;">
+                    <div class="relative">
+                        <!-- Floating Elements -->
+                        <div class="absolute -top-6 -left-6 w-24 h-24 bg-blue-500/20 rounded-2xl blur-2xl animate-float"></div>
+                        <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-400/20 rounded-2xl blur-2xl animate-float" style="animation-delay: 3s;"></div>
+                        
+                        <!-- Code Window -->
+                        <div class="relative rounded-2xl overflow-hidden shadow-2xl shadow-slate-900/20 border border-slate-200/50">
+                            <!-- Window Header -->
+                            <div class="bg-slate-800 flex items-center justify-between px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="text-xs text-slate-400 font-mono">handler.go</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Content -->
+                            <div class="code-gradient p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+                                <div class="text-slate-500">// Simple and elegant API handlers</div>
+                                <div class="mt-4">
+                                    <span class="text-blue-400">func</span> <span class="text-emerald-400">CreateResource</span><span class="text-slate-400">(</span><span class="text-white">c</span> <span class="text-slate-400">*</span><span class="text-white">gin</span><span class="text-slate-400">.</span><span class="text-white">Context</span><span class="text-slate-400">)</span> <span class="text-slate-400">{</span>
+                                </div>
+                                <div class="pl-4">
+                                    <span class="text-blue-400">var</span> <span class="text-white">data</span> <span class="text-white">models</span><span class="text-slate-400">.</span><span class="text-white">Resource</span>
+                                </div>
+                                <div class="pl-4 mt-2">
+                                    <span class="text-blue-400">if</span> <span class="text-white">err</span> <span class="text-slate-400">:=</span> <span class="text-white">c</span><span class="text-slate-400">.</span><span class="text-emerald-400">ShouldBindJSON</span><span class="text-slate-400">(&</span><span class="text-white">data</span><span class="text-slate-400">);</span> <span class="text-white">err</span> <span class="text-slate-400">!=</span> <span class="text-blue-400">nil</span> <span class="text-slate-400">{</span>
+                                </div>
+                                <div class="pl-8">
+                                    <span class="text-white">c</span><span class="text-slate-400">.</span><span class="text-emerald-400">JSON</span><span class="text-slate-400">(</span><span class="text-amber-300">400</span><span class="text-slate-400">,</span> <span class="text-white">gin</span><span class="text-slate-400">.</span><span class="text-white">H</span><span class="text-slate-400">{</span><span class="text-amber-300">"error"</span><span class="text-slate-400">:</span> <span class="text-white">err</span><span class="text-slate-400">.</span><span class="text-emerald-400">Error</span><span class="text-slate-400">()})</span>
+                                </div>
+                                <div class="pl-8">
+                                    <span class="text-blue-400">return</span>
+                                </div>
+                                <div class="pl-4">
+                                    <span class="text-slate-400">}</span>
+                                </div>
+                                <div class="pl-4 mt-2">
+                                    <span class="text-slate-500">// Process and save</span>
+                                </div>
+                                <div class="pl-4">
+                                    <span class="text-white">repo</span><span class="text-slate-400">.</span><span class="text-emerald-400">Create</span><span class="text-slate-400">(&</span><span class="text-white">data</span><span class="text-slate-400">)</span>
+                                </div>
+                                <div class="pl-4 mt-2">
+                                    <span class="text-white">c</span><span class="text-slate-400">.</span><span class="text-emerald-400">JSON</span><span class="text-slate-400">(</span><span class="text-amber-300">201</span><span class="text-slate-400">,</span> <span class="text-white">data</span><span class="text-slate-400">)</span>
+                                </div>
+                                <div class="text-slate-400">}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{{ end }}
