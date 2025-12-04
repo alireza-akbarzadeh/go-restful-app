@@ -18,7 +18,7 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *reposito
 		if c.Request.RequestURI == "/swagger/" {
 			c.Redirect(302, "/swagger/index.html")
 		}
-		ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("http://localhost:8080/swagger/doc.json"))(c)
+		ginSwagger.WrapHandler(swaggerFiles.Handler)(c)
 	})
 
 	// Health check endpoint
