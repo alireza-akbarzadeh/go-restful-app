@@ -13,6 +13,36 @@ import (
 func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *repository.UserRepository) *gin.Engine {
 	router := gin.Default()
 
+	// Root landing page
+	router.GET("/", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html")
+		c.String(200, `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Go RESTful API</title>
+				<style>
+					body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; text-align: center; line-height: 1.6; }
+					h1 { color: #2c3e50; margin-bottom: 10px; }
+					p { color: #7f8c8d; margin-bottom: 30px; }
+					.btn { display: inline-block; padding: 12px 24px; background-color: #3498db; color: white; text-decoration: none; border-radius: 6px; margin: 10px; transition: background 0.3s; font-weight: 500; }
+					.btn:hover { background-color: #2980b9; }
+					.btn.secondary { background-color: #95a5a6; }
+					.btn.secondary:hover { background-color: #7f8c8d; }
+				</style>
+			</head>
+			<body>
+				<h1>Welcome to Go RESTful API</h1>
+				<p>A robust REST API service built with Go, Gin, GORM, and SQLite.</p>
+				<div>
+					<a href="/swagger/index.html" class="btn">📄 Open API Documentation</a>
+					<a href="/health" class="btn secondary">💓 System Health</a>
+				</div>
+			</body>
+			</html>
+		`)
+	})
+
 	// Setup Swagger documentation
 	router.GET("/swagger/*any", func(c *gin.Context) {
 		if c.Request.RequestURI == "/swagger/" {
