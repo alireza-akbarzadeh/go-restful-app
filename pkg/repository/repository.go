@@ -8,6 +8,7 @@ type Models struct {
 	Events     *EventRepository
 	Attendees  *AttendeeRepository
 	Categories *CategoryRepository
+	Comments   *CommentRepository
 }
 
 // NewModels creates a new Models instance with all repositories
@@ -17,5 +18,6 @@ func NewModels(db *gorm.DB) *Models {
 		Events:     NewEventRepository(db),
 		Attendees:  NewAttendeeRepository(db),
 		Categories: NewCategoryRepository(db),
+		Comments:   NewCommentRepository(db),
 	}
 }

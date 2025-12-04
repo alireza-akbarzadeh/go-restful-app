@@ -43,6 +43,7 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *reposito
 			events.GET("", handler.GetAllEvents)
 			events.GET("/:id", handler.GetEvent)
 			events.GET("/:id/attendees", handler.GetAttendees)
+			events.GET("/:id/comments", handler.GetEventComments)
 		}
 
 		// Public attendee routes
@@ -65,6 +66,10 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *reposito
 			protected.POST("/events", handler.CreateEvent)
 			protected.PUT("/events/:id", handler.UpdateEvent)
 			protected.DELETE("/events/:id", handler.DeleteEvent)
+
+			// Comment management
+			protected.POST("/events/:id/comments", handler.CreateComment)
+			protected.DELETE("/events/:id/comments/:commentId", handler.DeleteComment)
 
 			// Attendee management
 			protected.POST("/events/:id/attendees/:userId", handler.AddAttendee)
