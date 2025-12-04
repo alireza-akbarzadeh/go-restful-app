@@ -50,6 +50,12 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *reposito
 			attendees.GET("/:id/events", handler.GetEventsByAttendee)
 		}
 
+		// Public category routes
+		categories := v1.Group("/categories")
+		{
+			categories.GET("", handler.GetAllCategories)
+		}
+
 		// Protected routes (require authentication)
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(jwtSecret, userRepo))
@@ -62,6 +68,9 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo *reposito
 			// Attendee management
 			protected.POST("/events/:id/attendees/:userId", handler.AddAttendee)
 			protected.DELETE("/events/:id/attendees/:userId", handler.RemoveAttendee)
+
+			// Category management
+			protected.POST("/categories", handler.CreateCategory)
 		}
 	}
 

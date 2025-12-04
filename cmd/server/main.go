@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Auto Migrate the schema
-	err = db.AutoMigrate(&repository.User{}, &repository.Event{}, &repository.Attendee{})
+	err = db.AutoMigrate(&repository.User{}, &repository.Event{}, &repository.Attendee{}, &repository.Category{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

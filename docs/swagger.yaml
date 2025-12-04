@@ -1,6 +1,46 @@
 basePath: /
 definitions:
-  database.Attendee:
+  handlers.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handlers.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/repository.User'
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        minLength: 3
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  helpers.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  repository.Attendee:
     properties:
       eventId:
         type: integer
@@ -9,7 +49,19 @@ definitions:
       userId:
         type: integer
     type: object
-  database.Event:
+  repository.Category:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  repository.Event:
     properties:
       date:
         type: string
@@ -32,47 +84,14 @@ definitions:
     - location
     - name
     type: object
-  database.User:
+  repository.User:
     properties:
-      _:
-        type: string
       email:
         type: string
       id:
         type: integer
       name:
         type: string
-    type: object
-  main.loginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        minLength: 8
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  main.loginResponse:
-    properties:
-      token:
-        type: string
-    type: object
-  main.registeredRoutes:
-    properties:
-      email:
-        type: string
-      name:
-        minLength: 3
-        type: string
-      password:
-        minLength: 8
-        type: string
-    required:
-    - email
-    - name
-    - password
     type: object
 host: localhost:8080
 info:
@@ -93,7 +112,7 @@ paths:
       - application/json
       description: Get all events for a specific attendee
       parameters:
-      - description: Attendee ID
+      - description: Attendee/User ID
         in: path
         name: id
         required: true
@@ -105,20 +124,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Event'
+              $ref: '#/definitions/repository.Event'
             type: array
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: Get events by attendee
       tags:
       - Attendees
@@ -133,32 +148,26 @@ paths:
         name: credentials
         required: true
         schema:
-          $ref: '#/definitions/main.loginRequest'
+          $ref: '#/definitions/handlers.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.loginResponse'
+            $ref: '#/definitions/handlers.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: User login
       tags:
       - Authentication
@@ -173,29 +182,81 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/main.registeredRoutes'
+          $ref: '#/definitions/handlers.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.User'
+            $ref: '#/definitions/repository.User'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: User registration
       tags:
       - Authentication
+  /api/v1/categories:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all event categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/repository.Category'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      summary: Get all categories
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new event category (requires authentication)
+      parameters:
+      - description: Category object
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/repository.Category'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/repository.Category'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - Categories
   /api/v1/events:
     get:
       consumes:
@@ -208,14 +269,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Event'
+              $ref: '#/definitions/repository.Event'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: Get all events
       tags:
       - Events
@@ -229,26 +288,26 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/database.Event'
+          $ref: '#/definitions/repository.Event'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.Event'
+            $ref: '#/definitions/repository.Event'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new event
@@ -273,27 +332,23 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete an event
@@ -315,25 +370,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Event'
+            $ref: '#/definitions/repository.Event'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: Get a single event
       tags:
       - Events
@@ -352,32 +401,34 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/database.Event'
+          $ref: '#/definitions/repository.Event'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Event'
+            $ref: '#/definitions/repository.Event'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update an event
@@ -401,20 +452,20 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.User'
+              $ref: '#/definitions/repository.User'
             type: array
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       summary: Get attendees for event
       tags:
       - Attendees
@@ -422,7 +473,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Remove an attendee from an event (requires authentication and ownership)
+      description: Remove an attendee from an event (requires authentication and event
+        ownership)
       parameters:
       - description: Event ID
         in: path
@@ -442,27 +494,23 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Remove attendee from event
@@ -471,7 +519,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Add an attendee to an event (requires authentication and ownership)
+      description: Add an attendee to an event (requires authentication and event
+        ownership)
       parameters:
       - description: Event ID
         in: path
@@ -489,37 +538,31 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.Attendee'
+            $ref: '#/definitions/repository.Attendee'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Add attendee to event

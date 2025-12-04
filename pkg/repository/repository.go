@@ -4,16 +4,18 @@ import "gorm.io/gorm"
 
 // Models holds all repository models
 type Models struct {
-	Users     *UserRepository
-	Events    *EventRepository
-	Attendees *AttendeeRepository
+	Users      *UserRepository
+	Events     *EventRepository
+	Attendees  *AttendeeRepository
+	Categories *CategoryRepository
 }
 
 // NewModels creates a new Models instance with all repositories
 func NewModels(db *gorm.DB) *Models {
 	return &Models{
-		Users:     NewUserRepository(db),
-		Events:    NewEventRepository(db),
-		Attendees: NewAttendeeRepository(db),
+		Users:      NewUserRepository(db),
+		Events:     NewEventRepository(db),
+		Attendees:  NewAttendeeRepository(db),
+		Categories: NewCategoryRepository(db),
 	}
 }
