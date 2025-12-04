@@ -15,7 +15,6 @@ import (
 
 const (
 	msgAuthHeaderRequired    = "Authorization header is required"
-	msgAuthHeaderFormat      = "Authorization header format must be Bearer {token}"
 	msgInvalidToken          = "Invalid token"
 	msgInvalidTokenClaims    = "Invalid token claims"
 	msgInvalidUserIDInClaims = "Invalid user ID in token claims"
@@ -34,13 +33,11 @@ func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) gin.H
 			return
 		}
 
+		tokenString := authorizationHeader
 		parts := strings.SplitN(authorizationHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			helpers.RespondWithError(c, http.StatusUnauthorized, msgAuthHeaderFormat)
-			c.Abort()
-			return
+		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+			tokenString = parts[1]
 		}
-		tokenString := parts[1]
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			// Require HMAC signing to prevent algorithm confusion

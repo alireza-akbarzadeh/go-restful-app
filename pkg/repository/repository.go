@@ -1,6 +1,6 @@
 package repository
 
-import "database/sql"
+import "gorm.io/gorm"
 
 // Models holds all repository models
 type Models struct {
@@ -10,7 +10,7 @@ type Models struct {
 }
 
 // NewModels creates a new Models instance with all repositories
-func NewModels(db *sql.DB) *Models {
+func NewModels(db *gorm.DB) *Models {
 	return &Models{
 		Users:     NewUserRepository(db),
 		Events:    NewEventRepository(db),

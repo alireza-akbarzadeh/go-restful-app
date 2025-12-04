@@ -1,68 +1,45 @@
 package repository
 
 import (
-	"context"
-	"database/sql"
-	"errors"
-	"time"
+	"gorm.io/gorm"
 )
 
 // Attendee represents an attendee relationship between a user and an event
 type Attendee struct {
-	ID      int `json:"id"`
-	UserID  int `json:"userId"`
-	EventID int `json:"eventId"`
+	ID      int `json:"id" gorm:"primaryKey"`
+	UserID  int `json:"userId" gorm:"not null"`
+	EventID int `json:"eventId" gorm:"not null"`
 }
 
 // AttendeeRepository handles attendee database operations
 type AttendeeRepository struct {
-	DB *sql.DB
+	DB *gorm.DB
 }
 
 // NewAttendeeRepository creates a new AttendeeRepository
-func NewAttendeeRepository(db *sql.DB) *AttendeeRepository {
+func NewAttendeeRepository(db *gorm.DB) *AttendeeRepository {
 	return &AttendeeRepository{DB: db}
 }
 
 // Insert creates a new attendee record
 func (r *AttendeeRepository) Insert(attendee *Attendee) (*Attendee, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	query := `INSERT INTO attendees (event_id, user_id) VALUES (?, ?)`
-	result, err := r.DB.ExecContext(ctx, query, attendee.EventID, attendee.UserID)
-	if err != nil {
-		return nil, err
+	result := r.DB.Create(attendee)
+	if result.Error != nil {
+		return nil, result.Error
 	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	attendee.ID = int(id)
-
 	return attendee, nil
 }
 
 // GetByEventAndUser retrieves an attendee record by event ID and user ID
 func (r *AttendeeRepository) GetByEventAndUser(eventID, userID int) (*Attendee, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	query := `SELECT id, user_id, event_id FROM attendees WHERE event_id = ? AND user_id = ?`
 	var attendee Attendee
-	err := r.DB.QueryRowContext(ctx, query, eventID, userID).Scan(
-		&attendee.ID,
-		&attendee.UserID,
-		&attendee.EventID,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	result := r.DB.Where("event_id = ? AND user_id = ?", eventID, userID).First(&attendee)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		return nil, err
+		return nil, result.Error
 	}
-
 	return &attendee, nil
 }
 
@@ -73,67 +50,31 @@ func (r *AttendeeRepository) GetByEventAndAttendee(eventID, userID int) (*Attend
 
 // GetAttendeesByEvent retrieves all users attending a specific event
 func (r *AttendeeRepository) GetAttendeesByEvent(eventID int) ([]*User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	var users []*User
+	// Using a JOIN query to fetch users directly
+	err := r.DB.Table("users").
+		Joins("JOIN attendees ON attendees.user_id = users.id").
+		Where("attendees.event_id = ?", eventID).
+		Find(&users).Error
 
-	query := `
-		SELECT u.id, u.name, u.email
-		FROM users u
-		JOIN attendees a ON u.id = a.user_id
-		WHERE a.event_id = ?
-	`
-	rows, err := r.DB.QueryContext(ctx, query, eventID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	users := []*User{}
-	for rows.Next() {
-		var user User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Email); err != nil {
-			return nil, err
-		}
-		users = append(users, &user)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return users, nil
 }
 
 // GetEventsByAttendee retrieves all events that a user is attending
 func (r *AttendeeRepository) GetEventsByAttendee(userID int) ([]*Event, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	var events []*Event
+	// Using a JOIN query to fetch events directly
+	err := r.DB.Table("events").
+		Joins("JOIN attendees ON attendees.event_id = events.id").
+		Where("attendees.user_id = ?", userID).
+		Find(&events).Error
 
-	query := `
-		SELECT e.id, e.owner_id, e.name, e.description, e.date, e.location
-		FROM events e
-		JOIN attendees a ON e.id = a.event_id
-		WHERE a.user_id = ?
-	`
-	rows, err := r.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	events := []*Event{}
-	for rows.Next() {
-		var event Event
-		if err := rows.Scan(&event.ID, &event.OwnerID, &event.Name, &event.Description, &event.Date, &event.Location); err != nil {
-			return nil, err
-		}
-		events = append(events, &event)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return events, nil
 }
 
@@ -144,30 +85,18 @@ func (r *AttendeeRepository) GetEventByAttendee(userID int) ([]*Event, error) {
 
 // Delete removes an attendee record
 func (r *AttendeeRepository) Delete(userID, eventID int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	query := `DELETE FROM attendees WHERE user_id = ? AND event_id = ?`
-	_, err := r.DB.ExecContext(ctx, query, userID, eventID)
-	return err
+	result := r.DB.Where("user_id = ? AND event_id = ?", userID, eventID).Delete(&Attendee{})
+	return result.Error
 }
 
 // DeleteByEvent removes all attendees for a specific event
 func (r *AttendeeRepository) DeleteByEvent(eventID int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	query := `DELETE FROM attendees WHERE event_id = ?`
-	_, err := r.DB.ExecContext(ctx, query, eventID)
-	return err
+	result := r.DB.Where("event_id = ?", eventID).Delete(&Attendee{})
+	return result.Error
 }
 
 // DeleteByUser removes all attendee records for a specific user
 func (r *AttendeeRepository) DeleteByUser(userID int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	query := `DELETE FROM attendees WHERE user_id = ?`
-	_, err := r.DB.ExecContext(ctx, query, userID)
-	return err
+	result := r.DB.Where("user_id = ?", userID).Delete(&Attendee{})
+	return result.Error
 }

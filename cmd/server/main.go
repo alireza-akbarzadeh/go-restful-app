@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,7 +12,8 @@ import (
 	"github.com/alireza-akbarzadeh/restful-app/pkg/config"
 	"github.com/alireza-akbarzadeh/restful-app/pkg/repository"
 	_ "github.com/joho/godotenv/autoload"
-	_ "modernc.org/sqlite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // @title Go Gin REST API
@@ -37,17 +37,18 @@ func main() {
 	jwtSecret := config.GetEnvString("JWT_SECRET", "some-secret-123456")
 	dbPath := config.GetEnvString("DATABASE_PATH", "./data.db")
 
-	// Initialize database
-	db, err := sql.Open("sqlite", dbPath)
+	// Initialize database with GORM
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to open database:", err)
 	}
-	defer db.Close()
 
-	if err = db.Ping(); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+	// Auto Migrate the schema
+	err = db.AutoMigrate(&repository.User{}, &repository.Event{}, &repository.Attendee{})
+	if err != nil {
+		log.Fatal("Failed to migrate database:", err)
 	}
-	log.Println("Successfully connected to database")
+	log.Println("Successfully connected to database and migrated schema")
 
 	// Initialize repositories
 	repos := repository.NewModels(db)
@@ -69,6 +70,10 @@ func main() {
 
 	// Start server
 	log.Printf("Starting server on port %d", port)
+	log.Printf("Swagger UI:   http://localhost:%d/swagger/index.html", port)
+	log.Printf("Health Check: http://localhost:%d/health", port)
+	log.Println("Database:     Connected")
+
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
