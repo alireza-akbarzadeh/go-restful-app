@@ -78,7 +78,7 @@ install-tools:
 	@echo "$(GREEN)Installing development tools...$(NC)"
 	@which air > /dev/null || (echo "Installing air..." && go install github.com/air-verse/air@latest)
 	@which swag > /dev/null || (echo "Installing swag..." && go install github.com/swaggo/swag/cmd/swag@latest)
-	@which migrate > /dev/null || (echo "Installing migrate..." && go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest)
+	@which migrate > /dev/null || (echo "Installing migrate..." && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest)
 	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
 	@echo "$(GREEN)✓ All tools installed!$(NC)"
 

@@ -14,10 +14,9 @@ const (
 	DEFAULT_LOG_LEVEL                string = "warn"
 	DEFAULT_DEV_LOG_LEVEL            string = "debug"
 	DEFAULT_CORS_ALLOW_ORIGINS       string = "*"
-	DEFAULT_DB_PLATFORM              string = DB_PLATFORM_SQLITE
+	DEFAULT_DB_PLATFORM              string = DB_PLATFORM_POSTGRES
 	DEFAULT_DB_TIMEZONE              string = DB_TIMEZONE_UTC
 	DEFAULT_DB_SSL_MODE              string = DB_SSL_MODE_DISABLED
-	DEFAULT_SQLITE_DB_NAME           string = "sqlite.db"
 	DEFAULT_LOGGER_TIMESTAMP_FORMAT  string = "2006-01-02 15:04:05.00000"
 	DEFAULT_REQUEST_TIMEOUT_DURATION int    = 60   // seconds
 	DEFAULT_WATCHER_SLEEP_INTERVAL   int    = 5000 // milliseconds
@@ -49,7 +48,6 @@ const (
 
 	DB_PLATFORM_POSTGRES  string = "postgres"
 	DB_PLATFORM_MYSQL     string = "mysql"
-	DB_PLATFORM_SQLITE    string = "sqlite"
 	DB_SSL_MODE_ENABLED   string = "require"
 	DB_SSL_MODE_DISABLED  string = "disable"
 	DB_TIMEZONE_UTC       string = "Etc/GMT"

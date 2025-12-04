@@ -12,7 +12,7 @@ import (
 	"github.com/alireza-akbarzadeh/restful-app/pkg/config"
 	"github.com/alireza-akbarzadeh/restful-app/pkg/repository"
 	_ "github.com/joho/godotenv/autoload"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -34,10 +34,17 @@ func main() {
 	// Load configuration
 	port := config.GetEnvInt("PORT", 8080)
 	jwtSecret := config.GetEnvString("JWT_SECRET", "some-secret-123456")
-	dbPath := config.GetEnvString("DATABASE_PATH", "./data.db")
+	dbUrl := config.GetEnvString("DATABASE_URL", "")
+
+	if dbUrl == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
+
+	log.Println("Using PostgreSQL database")
+	dialector := postgres.Open(dbUrl)
 
 	// Initialize database with GORM
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to open database:", err)
 	}
