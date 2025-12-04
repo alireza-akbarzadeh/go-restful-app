@@ -48,6 +48,7 @@ type UpdatePasswordRequest struct {
 // @Failure      401          {object}  helpers.ErrorResponse
 // @Failure      500          {object}  helpers.ErrorResponse
 // @Router       /api/v1/auth/login [post]
+
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -94,6 +95,16 @@ func (h *Handler) Login(c *gin.Context) {
 		Token: tokenString,
 		User:  user,
 	})
+}
+
+// Logout handles user logout
+// @Summary      User logout
+// @Description  Invalidate user session (client-side)
+// @Tags         Authentication
+// @Success      200          {object}  map[string]string
+// @Router       /api/v1/auth/logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
 
 // Register handles user registration

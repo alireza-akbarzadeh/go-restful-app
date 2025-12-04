@@ -1,9 +1,6 @@
 package web
 
-import _ "embed"
+import "embed"
 
-//go:embed index.html
-var LandingPage []byte
-
-//go:embed health.html
-var HealthPage []byte
+//go:embed *.html
+var Templates embed.FS
