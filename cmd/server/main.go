@@ -50,6 +50,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Get underlying SQL DB for graceful shutdown
+	sqlDB, err := db.DB()
+	if err != nil {
+		slog.Error("Failed to get SQL DB", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		slog.Info("Closing database connection...")
+		if err := sqlDB.Close(); err != nil {
+			slog.Error("Error closing database connection", "error", err)
+		}
+	}()
+
 	// 3. Run Migrations
 	if err := database.Migrate(db); err != nil {
 		slog.Error("Migration failed", "error", err)

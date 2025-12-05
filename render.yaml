@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ginflow-api
+    env: go
+    buildCommand: go build -o bin/api-server ./cmd/server/main.go
+    startCommand: ./bin/api-server
+    envVars:
+      - key: DATABASE_URL
+        sync: false # You will need to add your Neon DB connection string in the Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GIN_MODE
+        value: release
+    healthCheckPath: /health

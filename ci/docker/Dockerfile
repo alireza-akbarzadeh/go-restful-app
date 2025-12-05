@@ -28,11 +28,14 @@ FROM alpine:latest
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates
 
+# Create a non-root user
+RUN adduser -D -g '' appuser
+
 # Create app directory
 WORKDIR /app
 
-# Create data directory for database
-RUN mkdir -p /app/data
+# Create data directory for database and set permissions
+RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
 # Copy binaries from builder
 COPY --from=builder /app/api-server .
@@ -43,6 +46,12 @@ COPY --from=builder /app/cmd/migrate/migrations ./cmd/migrate/migrations
 
 # Copy swagger docs (if needed)
 COPY --from=builder /app/docs ./docs
+
+# Set ownership of all copied files to appuser
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8080
