@@ -27,7 +27,7 @@ func (r *ProfileRepository) Insert(profile *models.Profile) (*models.Profile, er
 }
 
 // Get retrieves a profile by ID
-func (r *ProfileRepository) Get(id uint) (*models.Profile, error) {
+func (r *ProfileRepository) Get(id int) (*models.Profile, error) {
 	var profile models.Profile
 	result := r.DB.First(&profile, id)
 	if result.Error != nil {
