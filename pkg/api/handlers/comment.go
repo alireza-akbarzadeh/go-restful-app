@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/alireza-akbarzadeh/ginflow/pkg/api/helpers"
@@ -26,7 +25,7 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id}/comments [post]
 func (h *Handler) CreateComment(c *gin.Context) {
-	eventID, err := strconv.Atoi(c.Param("id"))
+	eventID, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
 		return
@@ -44,15 +43,13 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	}
 
 	var comment models.Comment
-	if err := c.ShouldBindJSON(&comment); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+	if !helpers.BindJSON(c, &comment) {
 		return
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
@@ -80,7 +77,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events/{id}/comments [get]
 func (h *Handler) GetEventComments(c *gin.Context) {
-	eventID, err := strconv.Atoi(c.Param("id"))
+	eventID, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
 		return
@@ -110,16 +107,15 @@ func (h *Handler) GetEventComments(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id}/comments/{commentId} [delete]
 func (h *Handler) DeleteComment(c *gin.Context) {
-	commentID, err := strconv.Atoi(c.Param("commentId"))
+	commentID, err := helpers.ParseIDParam(c, "commentId")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid comment ID")
 		return
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 

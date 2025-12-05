@@ -39,9 +39,8 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 	}
 
 	// Get an authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
@@ -168,9 +167,8 @@ func (h *Handler) RemoveAttendee(c *gin.Context) {
 	}
 
 	// Get an authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 

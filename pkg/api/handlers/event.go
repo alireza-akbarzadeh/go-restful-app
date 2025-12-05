@@ -23,15 +23,13 @@ import (
 // @Router       /api/v1/events [post]
 func (h *Handler) CreateEvent(c *gin.Context) {
 	var event models.Event
-	if err := c.ShouldBindJSON(&event); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+	if !helpers.BindJSON(c, &event) {
 		return
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 

@@ -53,9 +53,8 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	}
 
 	// Get authenticated user
-	authUser := helpers.GetUserFromContext(c)
-	if authUser == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	authUser, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
@@ -78,8 +77,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 
 	// Bind new data
 	var updateData models.User
-	if err := c.ShouldBindJSON(&updateData); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+	if !helpers.BindJSON(c, &updateData) {
 		return
 	}
 

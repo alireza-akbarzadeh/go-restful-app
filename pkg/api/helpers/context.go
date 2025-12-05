@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"net/http"
+
 	"github.com/alireza-akbarzadeh/ginflow/pkg/models"
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +18,17 @@ func GetUserFromContext(c *gin.Context) *models.User {
 		return nil
 	}
 	return user
+}
+
+// GetAuthenticatedUser retrieves the authenticated user or sends an unauthorized response
+// Returns the user and true if found, nil and false otherwise
+func GetAuthenticatedUser(c *gin.Context) (*models.User, bool) {
+	user := GetUserFromContext(c)
+	if user == nil {
+		RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		return nil, false
+	}
+	return user, true
 }
 
 // SetUserInContext sets the authenticated user in gin context

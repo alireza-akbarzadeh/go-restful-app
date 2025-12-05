@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -45,4 +46,26 @@ func StrInArr(s string, arr []string) bool {
 
 func Exit(val int) {
 	os.Exit(val)
+}
+
+// GenerateSlug creates a URL-friendly slug from a string
+func GenerateSlug(input string) string {
+	// Convert to lower case
+	slug := strings.ToLower(input)
+
+	// Replace spaces with hyphens
+	slug = strings.ReplaceAll(slug, " ", "-")
+
+	// Remove non-alphanumeric characters (except hyphens)
+	reg, _ := regexp.Compile("[^a-z0-9-]+")
+	slug = reg.ReplaceAllString(slug, "")
+
+	// Remove multiple hyphens
+	reg, _ = regexp.Compile("-+")
+	slug = reg.ReplaceAllString(slug, "-")
+
+	// Trim hyphens from start and end
+	slug = strings.Trim(slug, "-")
+
+	return slug
 }

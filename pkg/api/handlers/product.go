@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/alireza-akbarzadeh/ginflow/pkg/api/helpers"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/models"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,22 +25,20 @@ import (
 // @Router       /api/v1/products [post]
 func (h *Handler) CreateProduct(c *gin.Context) {
 	var product models.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid product data: "+err.Error())
+	if !helpers.BindJSON(c, &product) {
 		return
 	}
 
 	// Get authenticated user using the helper
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 	product.UserID = user.ID
 
 	// Generate slug if not provided
 	if product.Slug == "" {
-		product.Slug = strings.ToLower(strings.ReplaceAll(product.Name, " ", "-"))
+		product.Slug = utils.GenerateSlug(product.Name)
 	}
 
 	createdProduct, err := h.Repos.Products.Insert(&product)
@@ -77,11 +75,7 @@ func (h *Handler) GetAllProducts(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":        products,
-		"total":       total,
-		"page":        page,
-		"limit":       limit,
+	helpers.RespondWithPagination(c, products, total, page, limit, gin.H{
 		"search":      search,
 		"category_id": categoryID,
 	})

@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/alireza-akbarzadeh/ginflow/pkg/api/helpers"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/models"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,14 +24,13 @@ import (
 // @Router       /api/v1/categories [post]
 func (h *Handler) CreateCategory(c *gin.Context) {
 	var category models.Category
-	if err := c.ShouldBindJSON(&category); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+	if !helpers.BindJSON(c, &category) {
 		return
 	}
 
 	// Generate slug if not provided
 	if category.Slug == "" {
-		category.Slug = strings.ToLower(strings.ReplaceAll(category.Name, " ", "-"))
+		category.Slug = utils.GenerateSlug(category.Name)
 	}
 
 	createdCategory, err := h.Repos.Categories.Insert(&category)
