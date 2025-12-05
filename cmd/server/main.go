@@ -1,20 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/alireza-akbarzadeh/ginflow/docs"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/api/handlers"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/api/routers"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/config"
-	"github.com/alireza-akbarzadeh/ginflow/pkg/models"
+	"github.com/alireza-akbarzadeh/ginflow/pkg/database"
 	"github.com/alireza-akbarzadeh/ginflow/pkg/repository"
 	_ "github.com/joho/godotenv/autoload"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 // @title Go Gin REST API
@@ -32,42 +34,29 @@ import (
 // @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
-	// Load configuration
+	// 1. Load Configuration
 	port := config.GetEnvInt("PORT", 8080)
 	jwtSecret := config.GetEnvString("JWT_SECRET", "some-secret-123456")
 	dbUrl := config.GetEnvString("DATABASE_URL", "")
 
-	if dbUrl == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
-	}
-
-	log.Println("Using PostgreSQL database")
-	dialector := postgres.Open(dbUrl)
-
-	// Initialize database with GORM
-	db, err := gorm.Open(dialector, &gorm.Config{})
+	// 2. Initialize Database
+	db, err := database.Connect(dbUrl)
 	if err != nil {
-		log.Fatal("Failed to open database:", err)
+		log.Fatalf("Database connection failed: %v", err)
 	}
 
-	// Auto Migrate the schema
-	err = db.AutoMigrate(&models.User{}, &models.Event{}, &models.Attendee{}, &models.Category{}, &models.Comment{}, &models.Profile{})
-	if err != nil {
-		log.Fatal("Failed to migrate database:", err)
+	// 3. Run Migrations
+	if err := database.Migrate(db); err != nil {
+		log.Fatalf("Migration failed: %v", err)
 	}
-	log.Println("Successfully connected to database and migrated schema")
 
-	// Initialize repositories
+	// 4. Initialize Dependencies
 	repos := repository.NewModels(db)
-
-	// Initialize handlers
 	handler := handlers.NewHandler(repos, jwtSecret)
-
-	// Setup router
 	router := routers.SetupRouter(handler, jwtSecret, repos.Users)
 
-	// Configure server
-	server := &http.Server{
+	// 5. Configure Server
+	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      router,
 		IdleTimeout:  time.Minute,
@@ -75,13 +64,29 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	// Start server
-	log.Printf("Starting server on port %d", port)
-	log.Printf("Swagger UI:   http://localhost:%d/swagger/index.html", port)
-	log.Printf("Health Check: http://localhost:%d/health", port)
-	log.Println("Database:     Connected")
+	// 6. Start Server in a Goroutine
+	go func() {
+		log.Printf("🚀 Server starting on port %d", port)
+		log.Printf("📚 Swagger UI:   http://localhost:%d/swagger/index.html", port)
+		log.Printf("🏥 Health Check: http://localhost:%d/health", port)
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("Failed to start server:", err)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// 7. Graceful Shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
 	}
+
+	log.Println("Server exiting")
 }
