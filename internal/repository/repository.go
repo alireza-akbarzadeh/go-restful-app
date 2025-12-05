@@ -15,6 +15,7 @@ type Models struct {
 	Profiles   interfaces.ProfileRepositoryInterface
 	Products   interfaces.ProductRepositoryInterface
 	Baskets    interfaces.BasketRepositoryInterface
+	TxManager  *TxManager
 }
 
 // NewModels creates a new Models instance with all repositories
@@ -28,5 +29,6 @@ func NewModels(db *gorm.DB) *Models {
 		Profiles:   NewProfileRepository(db),
 		Products:   NewProductRepository(db),
 		Baskets:    NewBasketRepository(db),
+		TxManager:  NewTxManager(db),
 	}
 }
