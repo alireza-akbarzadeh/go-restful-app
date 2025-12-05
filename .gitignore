@@ -59,3 +59,4 @@ logs/
 # Build artifacts
 dist/
 build/
+tmp/

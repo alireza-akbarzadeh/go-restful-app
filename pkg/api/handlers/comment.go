@@ -17,8 +17,8 @@ import (
 // @Accept       json
 // @Produce      json
 // @Param        id     path      int                 true  "Event ID"
-// @Param        comment body      repository.Comment  true  "Comment object"
-// @Success      201    {object}  repository.Comment
+// @Param        comment body      models.Comment  true  "Comment object"
+// @Success      201    {object}  models.Comment
 // @Failure      400    {object}  helpers.ErrorResponse
 // @Failure      401    {object}  helpers.ErrorResponse
 // @Failure      404    {object}  helpers.ErrorResponse
@@ -75,7 +75,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 // @Tags         Comments
 // @Produce      json
 // @Param        id   path      int  true  "Event ID"
-// @Success      200  {array}   repository.Comment
+// @Success      200  {array}   models.Comment
 // @Failure      400  {object}  helpers.ErrorResponse
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events/{id}/comments [get]

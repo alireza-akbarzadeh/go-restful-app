@@ -14,8 +14,8 @@ import (
 // @Tags         Categories
 // @Accept       json
 // @Produce      json
-// @Param        category  body      repository.Category  true  "Category object"
-// @Success      201       {object}  repository.Category
+// @Param        category  body      models.Category  true  "Category object"
+// @Success      201       {object}  models.Category
 // @Failure      400       {object}  helpers.ErrorResponse
 // @Failure      401       {object}  helpers.ErrorResponse
 // @Failure      500       {object}  helpers.ErrorResponse
@@ -43,7 +43,7 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 // @Tags         Categories
 // @Accept       json
 // @Produce      json
-// @Success      200  {array}   repository.Category
+// @Success      200  {array}   models.Category
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/categories [get]
 func (h *Handler) GetAllCategories(c *gin.Context) {

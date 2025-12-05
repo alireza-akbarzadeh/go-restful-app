@@ -14,7 +14,7 @@ import (
 // @Tags         Users
 // @Accept       json
 // @Produce      json
-// @Success      200  {array}   repository.User
+// @Success      200  {array}   models.User
 // @Failure      401  {object}  helpers.ErrorResponse
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Security     BearerAuth
@@ -36,8 +36,8 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id    path      int              true  "User ID"
-// @Param        user  body      repository.User  true  "User object"
-// @Success      200   {object}  repository.User
+// @Param        user  body      models.User  true  "User object"
+// @Success      200   {object}  models.User
 // @Failure      400   {object}  helpers.ErrorResponse
 // @Failure      401   {object}  helpers.ErrorResponse
 // @Failure      403   {object}  helpers.ErrorResponse

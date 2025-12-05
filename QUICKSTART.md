@@ -23,8 +23,7 @@ make setup
 This command will:
 
 - ✅ Download all Go dependencies
-- ✅ Install development tools (air, swag, migrate, golangci-lint)
-- ✅ Create the database and run migrations
+- ✅ Install development tools (air, swag, golangci-lint)
 
 ### 1.3 Configure Environment Variables
 
@@ -39,6 +38,11 @@ Open `.env` and customize if needed:
 ```env
 PORT=8080
 JWT_SECRET=change-this-to-something-secure
+
+# Database Configuration (PostgreSQL)
+DATABASE_URL=postgres://username:password@localhost:5432/database_name
+# Or for development with Docker:
+# DATABASE_URL=postgres://user:password@db:5432/ginflow_dev
 ```
 
 ## Step 2: Daily Development Workflow
@@ -102,37 +106,52 @@ curl -X GET http://localhost:8080/api/v1/events \
 
 Let's say you want to add a "Get User Profile" endpoint.
 
-**Step 3.1.1: Add the handler function** in `cmd/api/auth.go` (or create a new file like `user.go`):
+**Step 3.1.1: Add the handler function** in `pkg/api/handlers/` (create a new file like `profile.go`):
 
 ```go
+package handlers
+
+import (
+    "net/http"
+    "github.com/alireza-akbarzadeh/ginflow/pkg/api/helpers"
+    "github.com/gin-gonic/gin"
+)
+
 // GetUserProfile returns the current user's profile
 // @Summary Get user profile
 // @Description Get the profile of the currently authenticated user
-// @Tags users
+// @Tags Profile
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} database.User
-// @Failure 401 {object} ErrorResponse
-// @Router /api/v1/user/profile [get]
-func (app *application) GetUserProfile(c *gin.Context) {
-    userID := c.GetInt64("userID") // From JWT middleware
-
-    user, err := app.models.Users.GetById(userID)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+// @Success 200 {object} models.Profile
+// @Failure 401 {object} helpers.ErrorResponse
+// @Failure 404 {object} helpers.ErrorResponse
+// @Router /api/v1/profile [get]
+func (h *Handler) GetUserProfile(c *gin.Context) {
+    // Get authenticated user
+    authUser := helpers.GetUserFromContext(c)
+    if authUser == nil {
+        helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
         return
     }
 
-    c.JSON(http.StatusOK, user)
+    // Get profile
+    profile, err := h.Repos.Profiles.GetByUserID(authUser.ID)
+    if err != nil {
+        helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
+        return
+    }
+
+    c.JSON(http.StatusOK, profile)
 }
 ```
 
-**Step 3.1.2: Add the route** in `cmd/api/routes.go`:
+**Step 3.1.2: Add the route** in `pkg/api/routers/router.go`:
 
 ```go
 // In the protected routes section
-protected.GET("/user/profile", app.GetUserProfile)
+protected.GET("/profile", handler.GetUserProfile)
 ```
 
 **Step 3.1.3: Update Swagger docs**:
@@ -143,138 +162,95 @@ make swagger
 
 **Step 3.1.4: Test your new endpoint**:
 
-Restart the server (if using `make dev`, it should auto-restart). Visit Swagger UI to test!
+Restart the server (if using `make dev`, it should auto-restart). Visit Swagger UI at `http://localhost:8080/swagger/index.html` to test!
 
 ### 3.2 Adding a Database Table
 
-**Step 3.2.1: Create a migration**:
-
-```bash
-make migrate-create NAME=create_comments_table
-```
-
-This creates two files in `cmd/migrate/migrations/`:
-
-- `{timestamp}_create_comments_table.up.sql` - for creating the table
-- `{timestamp}_create_comments_table.down.sql` - for removing the table
-
-**Step 3.2.2: Edit the `.up.sql` file**:
-
-```sql
--- Migration: create_comments_table
-CREATE TABLE IF NOT EXISTS comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (event_id) REFERENCES events(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE INDEX idx_comments_event_id ON comments(event_id);
-```
-
-**Step 3.2.3: Edit the `.down.sql` file**:
-
-```sql
--- Migration: create_comments_table
-DROP INDEX IF EXISTS idx_comments_event_id;
-DROP TABLE IF EXISTS comments;
-```
-
-**Step 3.2.4: Run the migration**:
-
-```bash
-make migrate-up
-```
-
-**Step 3.2.5: Create the model** in `internal/database/models.go`:
+**Step 3.2.1: Create the model** in `pkg/models/` (create a new file like `comment.go`):
 
 ```go
+package models
+
+import "time"
+
 type Comment struct {
-    ID        int64     `json:"id"`
-    EventID   int64     `json:"event_id"`
-    UserID    int64     `json:"user_id"`
-    Content   string    `json:"content"`
-    CreatedAt time.Time `json:"created_at"`
+    ID        uint      `json:"id" gorm:"primaryKey"`
+    EventID   uint      `json:"eventId" gorm:"not null"`
+    UserID    int       `json:"userId" gorm:"not null"`
+    Content   string    `json:"content" gorm:"type:text;not null"`
+    CreatedAt time.Time `json:"createdAt"`
+    UpdatedAt time.Time `json:"updatedAt"`
+
+    // Relationships
+    Event Event `json:"event,omitempty" gorm:"foreignKey:EventID"`
+    User  User  `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 ```
 
-**Step 3.2.6: Create repository methods** in `internal/database/comments.go`:
+**Step 3.2.2: Create repository methods** in `pkg/repository/` (create a new file like `comment.go`):
 
 ```go
-package database
+package repository
 
-import "database/sql"
+import (
+    "github.com/alireza-akbarzadeh/ginflow/pkg/models"
+    "gorm.io/gorm"
+)
 
-type CommentModel struct {
-    DB *sql.DB
+type CommentRepository struct {
+    DB *gorm.DB
 }
 
-func (m *CommentModel) Insert(comment *Comment) error {
-    query := `INSERT INTO comments (event_id, user_id, content)
-              VALUES (?, ?, ?)`
-
-    result, err := m.DB.Exec(query, comment.EventID, comment.UserID, comment.Content)
-    if err != nil {
-        return err
-    }
-
-    id, err := result.LastInsertId()
-    if err != nil {
-        return err
-    }
-
-    comment.ID = id
-    return nil
+func NewCommentRepository(db *gorm.DB) *CommentRepository {
+    return &CommentRepository{DB: db}
 }
 
-func (m *CommentModel) GetByEventID(eventID int64) ([]*Comment, error) {
-    query := `SELECT id, event_id, user_id, content, created_at
-              FROM comments WHERE event_id = ? ORDER BY created_at DESC`
+func (r *CommentRepository) Create(comment *models.Comment) error {
+    return r.DB.Create(comment).Error
+}
 
-    rows, err := m.DB.Query(query, eventID)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
-
-    var comments []*Comment
-    for rows.Next() {
-        var c Comment
-        err := rows.Scan(&c.ID, &c.EventID, &c.UserID, &c.Content, &c.CreatedAt)
-        if err != nil {
-            return nil, err
-        }
-        comments = append(comments, &c)
-    }
-
-    return comments, nil
+func (r *CommentRepository) GetByEventID(eventID uint) ([]*models.Comment, error) {
+    var comments []*models.Comment
+    err := r.DB.Preload("User").Where("event_id = ?", eventID).Order("created_at DESC").Find(&comments).Error
+    return comments, err
 }
 ```
 
-**Step 3.2.7: Update Models struct** in `internal/database/models.go`:
+**Step 3.2.3: Update Models struct** in `pkg/repository/repository.go`:
 
 ```go
 type Models struct {
-    Users     UserModel
-    Events    EventModel
-    Attendees AttendeeModel
-    Comments  CommentModel  // Add this
+    Users     *UserRepository
+    Events    *EventRepository
+    Attendees *AttendeeRepository
+    Categories *CategoryRepository
+    Comments  *CommentRepository  // Add this
 }
 
-func NewModels(db *sql.DB) *Models {
+func NewModels(db *gorm.DB) *Models {
     return &Models{
-        Users:     UserModel{DB: db},
-        Events:    EventModel{DB: db},
-        Attendees: AttendeeModel{DB: db},
-        Comments:  CommentModel{DB: db},  // Add this
+        Users:      NewUserRepository(db),
+        Events:     NewEventRepository(db),
+        Attendees:  NewAttendeeRepository(db),
+        Categories: NewCategoryRepository(db),
+        Comments:   NewCommentRepository(db),  // Add this
     }
 }
 ```
 
-Now you can use `app.models.Comments` in your handlers!
+**Step 3.2.4: Update AutoMigrate** in `cmd/server/main.go`:
+
+```go
+err := db.AutoMigrate(
+    &models.User{},
+    &models.Event{},
+    &models.Attendee{},
+    &models.Category{},
+    &models.Comment{},  // Add this
+)
+```
+
+GORM will automatically create the table and relationships when you restart the server!
 
 ## Step 4: Common Tasks
 
@@ -294,11 +270,7 @@ make lint  # Run linter
 
 ### Reset Database
 
-If you mess up the database:
-
-```bash
-make db-reset
-```
+If you mess up the database, restart the server - GORM AutoMigrate will recreate tables automatically.
 
 ### Clean Build Artifacts
 
@@ -326,16 +298,17 @@ The server logs appear in your terminal where you ran `make dev`
 
 ### Database Issues
 
-View the database:
+Connect to your PostgreSQL database using your preferred database client (pgAdmin, DBeaver, etc.) or command line:
 
 ```bash
-sqlite3 data.db
-sqlite> .tables
-sqlite> SELECT * FROM users;
-sqlite> .quit
+psql "your-connection-string"
 ```
 
-Or use a GUI tool like [DB Browser for SQLite](https://sqlitebrowser.org/)
+Or use database management tools like:
+
+- [pgAdmin](https://www.pgadmin.org/)
+- [DBeaver](https://dbeaver.io/)
+- [TablePlus](https://tableplus.com/)
 
 ### Port Already in Use
 
@@ -366,33 +339,34 @@ make docker-run
 
 1. **Week 1-2**: Get comfortable with the existing CRUD operations
 
-   - Understand how routes work
-   - Study the authentication flow
-   - Practice making API requests
+   - Understand how routes work in `pkg/api/routers/router.go`
+   - Study the authentication flow in `pkg/api/handlers/auth.go`
+   - Practice making API requests using Swagger UI
 
 2. **Week 3-4**: Add your first feature
 
-   - Create a simple new endpoint
-   - Add validation
-   - Write tests
+   - Create a simple new endpoint following the profile example
+   - Add validation using the existing helpers
+   - Write tests in the `tests/` directory
 
 3. **Week 5-6**: Work with databases
 
-   - Create a new table
-   - Add relationships
-   - Learn about indexes
+   - Create a new model in `pkg/models/`
+   - Add repository methods in `pkg/repository/`
+   - Update AutoMigrate in `cmd/server/main.go`
 
 4. **Week 7-8**: Advanced topics
-   - Add pagination
-   - Implement search
+   - Add pagination to list endpoints
+   - Implement search and filtering
    - Add file uploads
-   - Rate limiting
+   - Rate limiting and security
 
 ## Need Help?
 
 - Check the main `README.md` for detailed documentation
-- Look at existing code for examples
-- Search for Go tutorials on specific topics
+- Look at existing code in `pkg/api/handlers/`, `pkg/models/`, and `pkg/repository/`
+- Study the profile implementation as a complete example
+- Search for Go/GORM tutorials for specific topics
 - Ask questions in Go community forums
 
 ## Useful Commands Cheat Sheet
@@ -400,15 +374,6 @@ make docker-run
 ```bash
 # Start development
 make dev
-
-# Run migrations
-make migrate-up
-
-# Create new migration
-make migrate-create NAME=my_migration
-
-# Reset database
-make db-reset
 
 # Run tests
 make test

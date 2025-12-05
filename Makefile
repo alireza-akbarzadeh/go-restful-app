@@ -3,11 +3,7 @@
 
 # Variables
 BINARY_NAME=api-server
-MIGRATE_BINARY=migrate-tool
 MAIN_PATH=./cmd/server
-MIGRATE_PATH=./cmd/migrate
-MIGRATIONS_PATH=./cmd/migrate/migrations
-DATABASE_PATH=./data.db
 
 # Go parameters
 GOCMD=go
@@ -25,7 +21,7 @@ YELLOW=\033[0;33m
 RED=\033[0;31m
 NC=\033[0m # No Color
 
-.PHONY: all build clean test coverage deps run migrate-up migrate-down migrate-create dev docker-build docker-run help
+.PHONY: all build clean test coverage deps run dev docker-build docker-run help
 
 # Default target
 all: deps build
@@ -36,20 +32,13 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Setup & Dependencies:$(NC)"
 	@echo "  make deps          - Download and tidy Go dependencies"
-	@echo "  make install-tools - Install development tools (air, swag, migrate)"
+	@echo "  make install-tools - Install development tools (air, swag, golangci-lint)"
 	@echo ""
 	@echo "$(YELLOW)Development:$(NC)"
 	@echo "  make run           - Run the application"
 	@echo "  make dev           - Run with hot reload (requires air)"
 	@echo "  make build         - Build the application binary"
 	@echo "  make clean         - Remove build artifacts and temporary files"
-	@echo ""
-	@echo "$(YELLOW)Database:$(NC)"
-	@echo "  make migrate-up    - Run database migrations up"
-	@echo "  make migrate-down  - Run database migrations down"
-	@echo "  make migrate-create NAME=<migration_name> - Create new migration files"
-	@echo "  make db-reset      - Reset database (down and up migrations)"
-	@echo "  make db-clean      - Remove database file"
 	@echo ""
 	@echo "$(YELLOW)Code Quality:$(NC)"
 	@echo "  make test          - Run tests"
@@ -78,7 +67,6 @@ install-tools:
 	@echo "$(GREEN)Installing development tools...$(NC)"
 	@which air > /dev/null || (echo "Installing air..." && go install github.com/air-verse/air@latest)
 	@which swag > /dev/null || (echo "Installing swag..." && go install github.com/swaggo/swag/cmd/swag@latest)
-	@which migrate > /dev/null || (echo "Installing migrate..." && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest)
 	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
 	@echo "$(GREEN)✓ All tools installed!$(NC)"
 
@@ -87,12 +75,6 @@ build:
 	@echo "$(GREEN)Building application...$(NC)"
 	$(GOBUILD) -o bin/$(BINARY_NAME) -v $(MAIN_PATH)
 	@echo "$(GREEN)✓ Build complete! Binary: bin/$(BINARY_NAME)$(NC)"
-
-## build-migrate: Build the migration tool
-build-migrate:
-	@echo "$(GREEN)Building migration tool...$(NC)"
-	$(GOBUILD) -o bin/$(MIGRATE_BINARY) -v $(MIGRATE_PATH)
-	@echo "$(GREEN)✓ Migration tool built: bin/$(MIGRATE_BINARY)$(NC)"
 
 ## run: Run the application
 run: build
@@ -112,51 +94,6 @@ clean:
 	rm -rf bin/
 	rm -rf tmp/
 	@echo "$(GREEN)✓ Clean complete!$(NC)"
-
-## db-clean: Remove database file
-db-clean:
-	@echo "$(YELLOW)Removing database file...$(NC)"
-	rm -f $(DATABASE_PATH)
-	@echo "$(GREEN)✓ Database removed!$(NC)"
-
-## migrate-up: Run database migrations up
-migrate-up:
-	@echo "$(GREEN)Running migrations up...$(NC)"
-	$(GOBUILD) -o bin/$(MIGRATE_BINARY) $(MIGRATE_PATH)
-	./bin/$(MIGRATE_BINARY) up
-	@echo "$(GREEN)✓ Migrations complete!$(NC)"
-
-## migrate-down: Run database migrations down
-migrate-down:
-	@echo "$(YELLOW)Running migrations down...$(NC)"
-	$(GOBUILD) -o bin/$(MIGRATE_BINARY) $(MIGRATE_PATH)
-	./bin/$(MIGRATE_BINARY) down
-	@echo "$(GREEN)✓ Migrations rolled back!$(NC)"
-
-## migrate-create: Create new migration files (usage: make migrate-create NAME=create_users_table)
-migrate-create:
-	@if [ -z "$(NAME)" ]; then \
-		echo "$(RED)Error: NAME is required. Usage: make migrate-create NAME=create_users_table$(NC)"; \
-		exit 1; \
-	fi
-	@echo "$(GREEN)Creating migration: $(NAME)$(NC)"
-	@timestamp=$$(date +%s); \
-	up_file="$(MIGRATIONS_PATH)/$${timestamp}_$(NAME).up.sql"; \
-	down_file="$(MIGRATIONS_PATH)/$${timestamp}_$(NAME).down.sql"; \
-	touch $$up_file $$down_file; \
-	echo "-- Migration: $(NAME)" > $$up_file; \
-	echo "-- Add your SQL here" >> $$up_file; \
-	echo "" >> $$up_file; \
-	echo "-- Migration: $(NAME)" > $$down_file; \
-	echo "-- Add your rollback SQL here" >> $$down_file; \
-	echo "" >> $$down_file; \
-	echo "$(GREEN)✓ Created migration files:$(NC)"; \
-	echo "  $$up_file"; \
-	echo "  $$down_file"
-
-## db-reset: Reset database (down and up migrations)
-db-reset: migrate-down migrate-up
-	@echo "$(GREEN)✓ Database reset complete!$(NC)"
 
 ## test: Run tests
 test:
@@ -219,7 +156,7 @@ check: fmt vet test
 	@echo "$(GREEN)✓ All checks passed!$(NC)"
 
 ## setup: Initial project setup
-setup: deps install-tools migrate-up
+setup: deps install-tools
 	@echo "$(GREEN)✓ Project setup complete!$(NC)"
 	@echo "$(YELLOW)Next steps:$(NC)"
 	@echo "  1. Copy .env.example to .env and configure your settings"

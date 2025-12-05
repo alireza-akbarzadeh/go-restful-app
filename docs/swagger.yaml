@@ -1,23 +1,5 @@
 basePath: /
 definitions:
-  handlers.LoginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        minLength: 8
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  handlers.LoginResponse:
-    properties:
-      token:
-        type: string
-      user:
-        $ref: '#/definitions/repository.User'
-    type: object
   handlers.RegisterRequest:
     properties:
       email:
@@ -51,7 +33,7 @@ definitions:
       message:
         type: string
     type: object
-  repository.Attendee:
+  models.Attendee:
     properties:
       eventId:
         type: integer
@@ -60,7 +42,7 @@ definitions:
       userId:
         type: integer
     type: object
-  repository.Category:
+  models.Category:
     properties:
       description:
         type: string
@@ -72,7 +54,7 @@ definitions:
     required:
     - name
     type: object
-  repository.Comment:
+  models.Comment:
     properties:
       content:
         minLength: 1
@@ -85,14 +67,14 @@ definitions:
         type: integer
       user:
         allOf:
-        - $ref: '#/definitions/repository.User'
+        - $ref: '#/definitions/models.User'
         description: Associations (optional, for preloading if needed)
       userId:
         type: integer
     required:
     - content
     type: object
-  repository.Event:
+  models.Event:
     properties:
       date:
         type: string
@@ -115,7 +97,52 @@ definitions:
     - location
     - name
     type: object
-  repository.User:
+  models.Profile:
+    properties:
+      avatarUrl:
+        type: string
+      bio:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      createdAt:
+        type: string
+      dateOfBirth:
+        type: string
+      emailNotifications:
+        type: boolean
+      github:
+        type: string
+      id:
+        type: integer
+      isPublic:
+        type: boolean
+      language:
+        type: string
+      linkedin:
+        type: string
+      phone:
+        type: string
+      pushNotifications:
+        type: boolean
+      theme:
+        type: string
+      timezone:
+        type: string
+      twitter:
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      userId:
+        type: integer
+      website:
+        type: string
+    type: object
+  models.User:
     properties:
       email:
         type: string
@@ -156,7 +183,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.Event'
+              $ref: '#/definitions/models.Event'
             type: array
         "400":
           description: Bad Request
@@ -169,38 +196,17 @@ paths:
       summary: Get events by attendee
       tags:
       - Attendees
-  /api/v1/auth/login:
+  /api/v1/auth/logout:
     post:
-      consumes:
-      - application/json
-      description: Authenticate user and return JWT token
-      parameters:
-      - description: Login credentials
-        in: body
-        name: credentials
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.LoginRequest'
-      produces:
-      - application/json
+      description: Invalidate user session (client-side)
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.LoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/helpers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/helpers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/helpers.ErrorResponse'
-      summary: User login
+            additionalProperties:
+              type: string
+            type: object
+      summary: User logout
       tags:
       - Authentication
   /api/v1/auth/password:
@@ -259,7 +265,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/repository.User'
+            $ref: '#/definitions/models.User'
         "400":
           description: Bad Request
           schema:
@@ -283,7 +289,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.Category'
+              $ref: '#/definitions/models.Category'
             type: array
         "500":
           description: Internal Server Error
@@ -302,14 +308,14 @@ paths:
         name: category
         required: true
         schema:
-          $ref: '#/definitions/repository.Category'
+          $ref: '#/definitions/models.Category'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/repository.Category'
+            $ref: '#/definitions/models.Category'
         "400":
           description: Bad Request
           schema:
@@ -339,7 +345,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.Event'
+              $ref: '#/definitions/models.Event'
             type: array
         "500":
           description: Internal Server Error
@@ -358,14 +364,14 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/repository.Event'
+          $ref: '#/definitions/models.Event'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/repository.Event'
+            $ref: '#/definitions/models.Event'
         "400":
           description: Bad Request
           schema:
@@ -440,7 +446,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/repository.Event'
+            $ref: '#/definitions/models.Event'
         "400":
           description: Bad Request
           schema:
@@ -471,14 +477,14 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/repository.Event'
+          $ref: '#/definitions/models.Event'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/repository.Event'
+            $ref: '#/definitions/models.Event'
         "400":
           description: Bad Request
           schema:
@@ -522,7 +528,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.User'
+              $ref: '#/definitions/models.User'
             type: array
         "400":
           description: Bad Request
@@ -608,7 +614,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/repository.Attendee'
+            $ref: '#/definitions/models.Attendee'
         "400":
           description: Bad Request
           schema:
@@ -654,7 +660,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.Comment'
+              $ref: '#/definitions/models.Comment'
             type: array
         "400":
           description: Bad Request
@@ -682,14 +688,14 @@ paths:
         name: comment
         required: true
         schema:
-          $ref: '#/definitions/repository.Comment'
+          $ref: '#/definitions/models.Comment'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/repository.Comment'
+            $ref: '#/definitions/models.Comment'
         "400":
           description: Bad Request
           schema:
@@ -753,6 +759,139 @@ paths:
       summary: Delete a comment
       tags:
       - Comments
+  /api/v1/profile:
+    delete:
+      consumes:
+      - application/json
+      description: Delete the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user profile
+      tags:
+      - Profile
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Profile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - Profile
+    post:
+      consumes:
+      - application/json
+      description: Create a new profile for the authenticated user
+      parameters:
+      - description: Profile object
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.Profile'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Profile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create user profile
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Update the authenticated user's profile information
+      parameters:
+      - description: Profile object
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.Profile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Profile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Profile
   /api/v1/users:
     get:
       consumes:
@@ -765,7 +904,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repository.User'
+              $ref: '#/definitions/models.User'
             type: array
         "401":
           description: Unauthorized
@@ -836,14 +975,14 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/repository.User'
+          $ref: '#/definitions/models.User'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/repository.User'
+            $ref: '#/definitions/models.User'
         "400":
           description: Bad Request
           schema:

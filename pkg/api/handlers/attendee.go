@@ -16,7 +16,7 @@ import (
 // @Produce      json
 // @Param        id      path      int  true  "Event ID"
 // @Param        userId  path      int  true  "User ID"
-// @Success      201     {object}  repository.Attendee
+// @Success      201     {object}  models.Attendee
 // @Failure      400     {object}  helpers.ErrorResponse
 // @Failure      401     {object}  helpers.ErrorResponse
 // @Failure      403     {object}  helpers.ErrorResponse
@@ -38,14 +38,14 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 		return
 	}
 
-	// Get authenticated user
+	// Get an authenticated user
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
 		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	// Check if event exists
+	// Check if the event exists
 	event, err := h.Repos.Events.Get(eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
@@ -62,7 +62,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 		return
 	}
 
-	// Check if user to add exists
+	// Check if a user to add exists
 	userToAdd, err := h.Repos.Users.Get(userID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve user")
@@ -106,7 +106,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id  path      int  true  "Event ID"
-// @Success      200 {array}   repository.User
+// @Success      200 {array}   models.User
 // @Failure      400 {object}  helpers.ErrorResponse
 // @Failure      404 {object}  helpers.ErrorResponse
 // @Failure      500 {object}  helpers.ErrorResponse
@@ -118,7 +118,7 @@ func (h *Handler) GetAttendees(c *gin.Context) {
 		return
 	}
 
-	// Check if event exists
+	// Check if the event exists
 	event, err := h.Repos.Events.Get(eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
@@ -167,14 +167,14 @@ func (h *Handler) RemoveAttendee(c *gin.Context) {
 		return
 	}
 
-	// Get authenticated user
+	// Get an authenticated user
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
 		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	// Check if event exists
+	// Check if the event exists
 	event, err := h.Repos.Events.Get(eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
@@ -207,7 +207,7 @@ func (h *Handler) RemoveAttendee(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id  path      int  true  "Attendee/User ID"
-// @Success      200 {array}   repository.Event
+// @Success      200 {array}   models.Event
 // @Failure      400 {object}  helpers.ErrorResponse
 // @Failure      500 {object}  helpers.ErrorResponse
 // @Router       /api/v1/attendees/{id}/events [get]

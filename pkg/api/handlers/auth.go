@@ -114,7 +114,7 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        user  body      RegisterRequest  true  "User registration details"
-// @Success      201   {object}  repository.User
+// @Success      201   {object}  models.User
 // @Failure      400   {object}  helpers.ErrorResponse
 // @Failure      500   {object}  helpers.ErrorResponse
 // @Router       /api/v1/auth/register [post]

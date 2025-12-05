@@ -14,8 +14,8 @@ import (
 // @Tags         Events
 // @Accept       json
 // @Produce      json
-// @Param        event  body      repository.Event  true  "Event object"
-// @Success      201    {object}  repository.Event
+// @Param        event  body      models.Event  true  "Event object"
+// @Success      201    {object}  models.Event
 // @Failure      400    {object}  helpers.ErrorResponse
 // @Failure      401    {object}  helpers.ErrorResponse
 // @Failure      500    {object}  helpers.ErrorResponse
@@ -52,7 +52,7 @@ func (h *Handler) CreateEvent(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      int  true  "Event ID"
-// @Success      200  {object}  repository.Event
+// @Success      200  {object}  models.Event
 // @Failure      400  {object}  helpers.ErrorResponse
 // @Failure      404  {object}  helpers.ErrorResponse
 // @Failure      500  {object}  helpers.ErrorResponse
@@ -83,7 +83,7 @@ func (h *Handler) GetEvent(c *gin.Context) {
 // @Tags         Events
 // @Accept       json
 // @Produce      json
-// @Success      200  {array}   repository.Event
+// @Success      200  {array}   models.Event
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events [get]
 func (h *Handler) GetAllEvents(c *gin.Context) {
@@ -103,8 +103,8 @@ func (h *Handler) GetAllEvents(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id     path      int             true  "Event ID"
-// @Param        event  body      repository.Event  true  "Event object"
-// @Success      200    {object}  repository.Event
+// @Param        event  body      models.Event  true  "Event object"
+// @Success      200    {object}  models.Event
 // @Failure      400    {object}  helpers.ErrorResponse
 // @Failure      401    {object}  helpers.ErrorResponse
 // @Failure      403    {object}  helpers.ErrorResponse

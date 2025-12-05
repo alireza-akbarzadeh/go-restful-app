@@ -51,7 +51,7 @@ func main() {
 	}
 
 	// Auto Migrate the schema
-	err = db.AutoMigrate(&models.User{}, &models.Event{}, &models.Attendee{}, &models.Category{}, &models.Comment{})
+	err = db.AutoMigrate(&models.User{}, &models.Event{}, &models.Attendee{}, &models.Category{}, &models.Comment{}, &models.Profile{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

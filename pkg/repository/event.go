@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/alireza-akbarzadeh/ginflow/pkg/models"
 	"gorm.io/gorm"
 )
@@ -29,7 +31,7 @@ func (r *EventRepository) Get(id int) (*models.Event, error) {
 	var event models.Event
 	result := r.DB.First(&event, id)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, result.Error
