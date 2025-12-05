@@ -1,17 +1,20 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"github.com/alireza-akbarzadeh/ginflow/internal/repository/interfaces"
+	"gorm.io/gorm"
+)
 
 // Models holds all repository models
 type Models struct {
-	Users      UserRepositoryInterface
-	Events     EventRepositoryInterface
-	Attendees  AttendeeRepositoryInterface
-	Categories CategoryRepositoryInterface
-	Comments   CommentRepositoryInterface
-	Profiles   ProfileRepositoryInterface
-	Products   ProductRepositoryInterface
-	Baskets    BasketRepositoryInterface
+	Users      interfaces.UserRepositoryInterface
+	Events     interfaces.EventRepositoryInterface
+	Attendees  interfaces.AttendeeRepositoryInterface
+	Categories interfaces.CategoryRepositoryInterface
+	Comments   interfaces.CommentRepositoryInterface
+	Profiles   interfaces.ProfileRepositoryInterface
+	Products   interfaces.ProductRepositoryInterface
+	Baskets    interfaces.BasketRepositoryInterface
 }
 
 // NewModels creates a new Models instance with all repositories

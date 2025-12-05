@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
-	"github.com/alireza-akbarzadeh/ginflow/internal/repository"
+	"github.com/alireza-akbarzadeh/ginflow/internal/repository/interfaces"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
@@ -24,7 +24,7 @@ const (
 )
 
 // AuthMiddleware creates a new authentication middleware
-func AuthMiddleware(jwtSecret string, userRepo repository.UserRepositoryInterface) gin.HandlerFunc {
+func AuthMiddleware(jwtSecret string, userRepo interfaces.UserRepositoryInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authorizationHeader := c.GetHeader("Authorization")
 		if authorizationHeader == "" {

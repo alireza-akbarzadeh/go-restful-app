@@ -6,7 +6,7 @@ import (
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/handlers"
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/middleware"
 	"github.com/alireza-akbarzadeh/ginflow/internal/constants"
-	"github.com/alireza-akbarzadeh/ginflow/internal/repository"
+	"github.com/alireza-akbarzadeh/ginflow/internal/repository/interfaces"
 	"github.com/alireza-akbarzadeh/ginflow/internal/web"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -15,7 +15,7 @@ import (
 )
 
 // SetupRouter configures and returns the main router
-func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo repository.UserRepositoryInterface) *gin.Engine {
+func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo interfaces.UserRepositoryInterface) *gin.Engine {
 	// Use gin.New() instead of Default() to use custom logger
 	router := gin.New()
 
