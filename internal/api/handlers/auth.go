@@ -57,7 +57,7 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	// Get user by email
-	user, err := h.Repos.Users.GetByEmail(req.Email)
+	user, err := h.Repos.Users.GetByEmail(c.Request.Context(), req.Email)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Something went wrong")
 		return
@@ -86,7 +86,7 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	// Update last login time
-	_ = h.Repos.Users.UpdateLastLogin(user.ID)
+	_ = h.Repos.Users.UpdateLastLogin(c.Request.Context(), user.ID)
 
 	// Don't expose password in response
 	user.Password = ""
@@ -126,7 +126,7 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	// Check if user already exists
-	existingUser, err := h.Repos.Users.GetByEmail(req.Email)
+	existingUser, err := h.Repos.Users.GetByEmail(c.Request.Context(), req.Email)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to check existing user")
 		return
@@ -150,7 +150,7 @@ func (h *Handler) Register(c *gin.Context) {
 		Name:     req.Name,
 	}
 
-	createdUser, err := h.Repos.Users.Insert(user)
+	createdUser, err := h.Repos.Users.Insert(c.Request.Context(), user)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to register user")
 		return
@@ -190,7 +190,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	}
 
 	// Get fresh user data to verify old password
-	dbUser, err := h.Repos.Users.Get(user.ID)
+	dbUser, err := h.Repos.Users.Get(c.Request.Context(), user.ID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve user")
 		return
@@ -215,7 +215,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	}
 
 	// Update password
-	if err := h.Repos.Users.UpdatePassword(user.ID, string(hashedPassword)); err != nil {
+	if err := h.Repos.Users.UpdatePassword(c.Request.Context(), user.ID, string(hashedPassword)); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update password")
 		return
 	}

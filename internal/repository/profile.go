@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
@@ -18,8 +19,8 @@ func NewProfileRepository(db *gorm.DB) *ProfileRepository {
 }
 
 // Insert creates a new profile in the database
-func (r *ProfileRepository) Insert(profile *models.Profile) (*models.Profile, error) {
-	result := r.DB.Create(profile)
+func (r *ProfileRepository) Insert(ctx context.Context, profile *models.Profile) (*models.Profile, error) {
+	result := r.DB.WithContext(ctx).Create(profile)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -27,9 +28,9 @@ func (r *ProfileRepository) Insert(profile *models.Profile) (*models.Profile, er
 }
 
 // Get retrieves a profile by ID
-func (r *ProfileRepository) Get(id int) (*models.Profile, error) {
+func (r *ProfileRepository) Get(ctx context.Context, id int) (*models.Profile, error) {
 	var profile models.Profile
-	result := r.DB.First(&profile, id)
+	result := r.DB.WithContext(ctx).First(&profile, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -41,9 +42,9 @@ func (r *ProfileRepository) Get(id int) (*models.Profile, error) {
 
 // GetByUserID retrieves a profile by user ID
 
-func (r *ProfileRepository) GetByUserID(userID int) (*models.Profile, error) {
+func (r *ProfileRepository) GetByUserID(ctx context.Context, userID int) (*models.Profile, error) {
 	var profile models.Profile
-	result := r.DB.Where("user_id = ?", userID).First(&profile)
+	result := r.DB.WithContext(ctx).Where("user_id = ?", userID).First(&profile)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -55,9 +56,9 @@ func (r *ProfileRepository) GetByUserID(userID int) (*models.Profile, error) {
 
 // GetByUserIDWithUser retrieves a profile with user data preloaded
 
-func (r *ProfileRepository) GetByUserIDWithUser(userID int) (*models.Profile, error) {
+func (r *ProfileRepository) GetByUserIDWithUser(ctx context.Context, userID int) (*models.Profile, error) {
 	var profile models.Profile
-	result := r.DB.Preload("User").Where("user_id = ?", userID).First(&profile)
+	result := r.DB.WithContext(ctx).Preload("User").Where("user_id = ?", userID).First(&profile)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -69,19 +70,19 @@ func (r *ProfileRepository) GetByUserIDWithUser(userID int) (*models.Profile, er
 
 // Update updates an existing profile
 
-func (r *ProfileRepository) Update(profile *models.Profile) error {
-	result := r.DB.Save(profile)
+func (r *ProfileRepository) Update(ctx context.Context, profile *models.Profile) error {
+	result := r.DB.WithContext(ctx).Save(profile)
 	return result.Error
 }
 
 // UpdateByUserID updates a profile by user ID
-func (r *ProfileRepository) UpdateByUserID(userID int, updates map[string]interface{}) error {
-	result := r.DB.Model(&models.Profile{}).Where("user_id = ?", userID).Updates(updates)
+func (r *ProfileRepository) UpdateByUserID(ctx context.Context, userID int, updates map[string]interface{}) error {
+	result := r.DB.WithContext(ctx).Model(&models.Profile{}).Where("user_id = ?", userID).Updates(updates)
 	return result.Error
 }
 
 // DeleteByUserID deletes a profile by user ID
-func (r *ProfileRepository) DeleteByUserID(id int) error {
-	result := r.DB.Delete(&models.Profile{}, id)
+func (r *ProfileRepository) DeleteByUserID(ctx context.Context, id int) error {
+	result := r.DB.WithContext(ctx).Delete(&models.Profile{}, id)
 	return result.Error
 }

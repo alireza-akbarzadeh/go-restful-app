@@ -28,7 +28,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		return
 	}
 	// Get Profile with user Data
-	profile, err := h.Repos.Profiles.GetByUserIDWithUser(authUser.ID)
+	profile, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
 		return
@@ -64,7 +64,7 @@ func (h *Handler) CreateProfile(c *gin.Context) {
 		return
 	}
 	// Check if a profile already exists
-	existingProfile, err := h.Repos.Profiles.GetByUserID(authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
 		return
@@ -81,13 +81,13 @@ func (h *Handler) CreateProfile(c *gin.Context) {
 	}
 	// Set user ID and create a profile
 	profile.UserID = authUser.ID
-	createdProfile, err := h.Repos.Profiles.Insert(&profile)
+	createdProfile, err := h.Repos.Profiles.Insert(c.Request.Context(), &profile)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create profile")
 		return
 	}
 	// Return profile with user data
-	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(authUser.ID)
+	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
 	if err != nil {
 		// If preloading fails, return the created profile
 		c.JSON(http.StatusCreated, createdProfile)
@@ -117,7 +117,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	// Get an existing profile
-	existingProfile, err := h.Repos.Profiles.GetByUserID(authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
 		return
@@ -132,12 +132,12 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	// If a profile doesn't exist, create it
 	if existingProfile == nil {
 		updateData.UserID = authUser.ID
-		createdProfile, err := h.Repos.Profiles.Insert(&updateData)
+		createdProfile, err := h.Repos.Profiles.Insert(c.Request.Context(), &updateData)
 		if err != nil {
 			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create profile")
 			return
 		}
-		profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(authUser.ID)
+		profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
 		if err != nil {
 			c.JSON(http.StatusCreated, createdProfile)
 			return
@@ -164,13 +164,13 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	existingProfile.EmailNotifications = updateData.EmailNotifications
 	existingProfile.PushNotifications = updateData.PushNotifications
 	//save updated
-	if err := h.Repos.Profiles.Update(existingProfile); err != nil {
+	if err := h.Repos.Profiles.Update(c.Request.Context(), existingProfile); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update profile")
 
 	}
 	c.JSON(http.StatusOK, existingProfile)
 	// Return an updated profile with user data
-	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(authUser.ID)
+	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
 	if err != nil {
 		c.JSON(http.StatusOK, existingProfile)
 		return
@@ -198,7 +198,7 @@ func (h *Handler) DeleteProfile(c *gin.Context) {
 		return
 	}
 	// Check if a profile exists
-	existingProfile, err := h.Repos.Profiles.GetByUserID(authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
 		return
@@ -208,7 +208,7 @@ func (h *Handler) DeleteProfile(c *gin.Context) {
 		return
 	}
 	// Delete profile
-	if err := h.Repos.Profiles.DeleteByUserID(authUser.ID); err != nil {
+	if err := h.Repos.Profiles.DeleteByUserID(c.Request.Context(), authUser.ID); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete profile")
 		return
 	}

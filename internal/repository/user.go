@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -19,8 +20,8 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 }
 
 // Insert creates a new user in the database
-func (r *UserRepository) Insert(user *models.User) (*models.User, error) {
-	result := r.DB.Create(user)
+func (r *UserRepository) Insert(ctx context.Context, user *models.User) (*models.User, error) {
+	result := r.DB.WithContext(ctx).Create(user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -28,9 +29,9 @@ func (r *UserRepository) Insert(user *models.User) (*models.User, error) {
 }
 
 // Get retrieves a user by ID
-func (r *UserRepository) Get(id int) (*models.User, error) {
+func (r *UserRepository) Get(ctx context.Context, id int) (*models.User, error) {
 	var user models.User
-	result := r.DB.First(&user, id)
+	result := r.DB.WithContext(ctx).First(&user, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -41,9 +42,9 @@ func (r *UserRepository) Get(id int) (*models.User, error) {
 }
 
 // GetByEmail retrieves a user by email
-func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	result := r.DB.Where("email = ?", email).First(&user)
+	result := r.DB.WithContext(ctx).Where("email = ?", email).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -54,20 +55,20 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 }
 
 // GetById retrieves a user by ID (alias for Get)
-func (r *UserRepository) GetById(id int) (*models.User, error) {
-	return r.Get(id)
+func (r *UserRepository) GetById(ctx context.Context, id int) (*models.User, error) {
+	return r.Get(ctx, id)
 }
 
 // UpdatePassword updates the user's password
-func (r *UserRepository) UpdatePassword(userID int, hashedPassword string) error {
-	result := r.DB.Model(&models.User{}).Where("id = ?", userID).Update("password", hashedPassword)
+func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, hashedPassword string) error {
+	result := r.DB.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).Update("password", hashedPassword)
 	return result.Error
 }
 
 // GetAll retrieves all users
-func (r *UserRepository) GetAll() ([]*models.User, error) {
+func (r *UserRepository) GetAll(ctx context.Context) ([]*models.User, error) {
 	var users []*models.User
-	result := r.DB.Find(&users)
+	result := r.DB.WithContext(ctx).Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -75,20 +76,20 @@ func (r *UserRepository) GetAll() ([]*models.User, error) {
 }
 
 // Update updates an existing user
-func (r *UserRepository) Update(user *models.User) error {
-	result := r.DB.Save(user)
+func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
+	result := r.DB.WithContext(ctx).Save(user)
 	return result.Error
 }
 
 // Delete removes a user by ID
-func (r *UserRepository) Delete(id int) error {
-	result := r.DB.Delete(&models.User{}, id)
+func (r *UserRepository) Delete(ctx context.Context, id int) error {
+	result := r.DB.WithContext(ctx).Delete(&models.User{}, id)
 	return result.Error
 }
 
 // UpdateLastLogin updates the last login timestamp for a user
-func (r *UserRepository) UpdateLastLogin(id int) error {
+func (r *UserRepository) UpdateLastLogin(ctx context.Context, id int) error {
 	now := time.Now()
-	result := r.DB.Model(&models.User{}).Where("id = ?", id).Update("last_login", now)
+	result := r.DB.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Update("last_login", now)
 	return result.Error
 }

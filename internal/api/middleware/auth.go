@@ -90,7 +90,7 @@ func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) gin.H
 			return
 		}
 
-		user, err := userRepo.Get(userID)
+		user, err := userRepo.Get(c.Request.Context(), userID)
 		if err != nil {
 			helpers.RespondWithError(c, http.StatusInternalServerError, msgInternalError)
 			c.Abort()

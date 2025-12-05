@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
@@ -18,8 +19,8 @@ func NewEventRepository(db *gorm.DB) *EventRepository {
 }
 
 // Insert creates a new event in the database
-func (r *EventRepository) Insert(event *models.Event) (*models.Event, error) {
-	result := r.DB.Create(event)
+func (r *EventRepository) Insert(ctx context.Context, event *models.Event) (*models.Event, error) {
+	result := r.DB.WithContext(ctx).Create(event)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -27,9 +28,9 @@ func (r *EventRepository) Insert(event *models.Event) (*models.Event, error) {
 }
 
 // Get retrieves an event by ID
-func (r *EventRepository) Get(id int) (*models.Event, error) {
+func (r *EventRepository) Get(ctx context.Context, id int) (*models.Event, error) {
 	var event models.Event
-	result := r.DB.First(&event, id)
+	result := r.DB.WithContext(ctx).First(&event, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -40,9 +41,9 @@ func (r *EventRepository) Get(id int) (*models.Event, error) {
 }
 
 // GetAll retrieves all events
-func (r *EventRepository) GetAll() ([]*models.Event, error) {
+func (r *EventRepository) GetAll(ctx context.Context) ([]*models.Event, error) {
 	var events []*models.Event
-	result := r.DB.Find(&events)
+	result := r.DB.WithContext(ctx).Find(&events)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -50,13 +51,13 @@ func (r *EventRepository) GetAll() ([]*models.Event, error) {
 }
 
 // Update updates an existing event
-func (r *EventRepository) Update(event *models.Event) error {
-	result := r.DB.Save(event)
+func (r *EventRepository) Update(ctx context.Context, event *models.Event) error {
+	result := r.DB.WithContext(ctx).Save(event)
 	return result.Error
 }
 
 // Delete removes an event by ID
-func (r *EventRepository) Delete(id int) error {
-	result := r.DB.Delete(&models.Event{}, id)
+func (r *EventRepository) Delete(ctx context.Context, id int) error {
+	result := r.DB.WithContext(ctx).Delete(&models.Event{}, id)
 	return result.Error
 }

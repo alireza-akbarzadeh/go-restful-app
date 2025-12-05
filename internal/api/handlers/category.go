@@ -33,7 +33,7 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 		category.Slug = utils.GenerateSlug(category.Name)
 	}
 
-	createdCategory, err := h.Repos.Categories.Insert(&category)
+	createdCategory, err := h.Repos.Categories.Insert(c.Request.Context(), &category)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create category")
 		return
@@ -52,7 +52,7 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/categories [get]
 func (h *Handler) GetAllCategories(c *gin.Context) {
-	categories, err := h.Repos.Categories.GetAll()
+	categories, err := h.Repos.Categories.GetAll(c.Request.Context())
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve categories")
 		return
@@ -74,7 +74,7 @@ func (h *Handler) GetAllCategories(c *gin.Context) {
 // @Router       /api/v1/categories/{slug} [get]
 func (h *Handler) GetCategoryBySlug(c *gin.Context) {
 	slug := c.Param("slug")
-	category, err := h.Repos.Categories.GetBySlug(slug)
+	category, err := h.Repos.Categories.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve category")
 		return

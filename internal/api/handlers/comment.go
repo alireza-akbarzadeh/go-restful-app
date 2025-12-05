@@ -32,7 +32,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	}
 
 	// Check if event exists
-	event, err := h.Repos.Events.Get(eventID)
+	event, err := h.Repos.Events.Get(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Database error")
 		return
@@ -57,7 +57,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	comment.UserID = user.ID
 	comment.CreatedAt = time.Now()
 
-	createdComment, err := h.Repos.Comments.Insert(&comment)
+	createdComment, err := h.Repos.Comments.Insert(c.Request.Context(), &comment)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create comment")
 		return
@@ -83,7 +83,7 @@ func (h *Handler) GetEventComments(c *gin.Context) {
 		return
 	}
 
-	comments, err := h.Repos.Comments.GetByEvent(eventID)
+	comments, err := h.Repos.Comments.GetByEvent(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to fetch comments")
 		return
@@ -120,7 +120,7 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 	}
 
 	// Check if comment exists
-	comment, err := h.Repos.Comments.Get(commentID)
+	comment, err := h.Repos.Comments.Get(c.Request.Context(), commentID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Database error")
 		return
@@ -136,7 +136,7 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 		return
 	}
 
-	if err := h.Repos.Comments.Delete(commentID); err != nil {
+	if err := h.Repos.Comments.Delete(c.Request.Context(), commentID); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete comment")
 		return
 	}

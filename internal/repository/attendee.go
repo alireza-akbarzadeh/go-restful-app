@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"gorm.io/gorm"
 )
@@ -16,8 +18,8 @@ func NewAttendeeRepository(db *gorm.DB) *AttendeeRepository {
 }
 
 // Insert creates a new attendee record
-func (r *AttendeeRepository) Insert(attendee *models.Attendee) (*models.Attendee, error) {
-	result := r.DB.Create(attendee)
+func (r *AttendeeRepository) Insert(ctx context.Context, attendee *models.Attendee) (*models.Attendee, error) {
+	result := r.DB.WithContext(ctx).Create(attendee)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -25,9 +27,9 @@ func (r *AttendeeRepository) Insert(attendee *models.Attendee) (*models.Attendee
 }
 
 // GetByEventAndUser retrieves an attendee record by event ID and user ID
-func (r *AttendeeRepository) GetByEventAndUser(eventID, userID int) (*models.Attendee, error) {
+func (r *AttendeeRepository) GetByEventAndUser(ctx context.Context, eventID, userID int) (*models.Attendee, error) {
 	var attendee models.Attendee
-	result := r.DB.Where("event_id = ? AND user_id = ?", eventID, userID).First(&attendee)
+	result := r.DB.WithContext(ctx).Where("event_id = ? AND user_id = ?", eventID, userID).First(&attendee)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -38,15 +40,15 @@ func (r *AttendeeRepository) GetByEventAndUser(eventID, userID int) (*models.Att
 }
 
 // GetByEventAndAttendee is an alias for GetByEventAndUser for backwards compatibility
-func (r *AttendeeRepository) GetByEventAndAttendee(eventID, userID int) (*models.Attendee, error) {
-	return r.GetByEventAndUser(eventID, userID)
+func (r *AttendeeRepository) GetByEventAndAttendee(ctx context.Context, eventID, userID int) (*models.Attendee, error) {
+	return r.GetByEventAndUser(ctx, eventID, userID)
 }
 
 // GetAttendeesByEvent retrieves all users attending a specific event
-func (r *AttendeeRepository) GetAttendeesByEvent(eventID int) ([]*models.User, error) {
+func (r *AttendeeRepository) GetAttendeesByEvent(ctx context.Context, eventID int) ([]*models.User, error) {
 	var users []*models.User
 	// Using a JOIN query to fetch users directly
-	err := r.DB.Table("users").
+	err := r.DB.WithContext(ctx).Table("users").
 		Joins("JOIN attendees ON attendees.user_id = users.id").
 		Where("attendees.event_id = ?", eventID).
 		Find(&users).Error
@@ -58,10 +60,10 @@ func (r *AttendeeRepository) GetAttendeesByEvent(eventID int) ([]*models.User, e
 }
 
 // GetEventsByAttendee retrieves all events that a user is attending
-func (r *AttendeeRepository) GetEventsByAttendee(userID int) ([]*models.Event, error) {
+func (r *AttendeeRepository) GetEventsByAttendee(ctx context.Context, userID int) ([]*models.Event, error) {
 	var events []*models.Event
 	// Using a JOIN query to fetch events directly
-	err := r.DB.Table("events").
+	err := r.DB.WithContext(ctx).Table("events").
 		Joins("JOIN attendees ON attendees.event_id = events.id").
 		Where("attendees.user_id = ?", userID).
 		Find(&events).Error
@@ -73,24 +75,24 @@ func (r *AttendeeRepository) GetEventsByAttendee(userID int) ([]*models.Event, e
 }
 
 // GetEventByAttendee is an alias for GetEventsByAttendee for backwards compatibility
-func (r *AttendeeRepository) GetEventByAttendee(userID int) ([]*models.Event, error) {
-	return r.GetEventsByAttendee(userID)
+func (r *AttendeeRepository) GetEventByAttendee(ctx context.Context, userID int) ([]*models.Event, error) {
+	return r.GetEventsByAttendee(ctx, userID)
 }
 
 // Delete removes an attendee record
-func (r *AttendeeRepository) Delete(userID, eventID int) error {
-	result := r.DB.Where("user_id = ? AND event_id = ?", userID, eventID).Delete(&models.Attendee{})
+func (r *AttendeeRepository) Delete(ctx context.Context, userID, eventID int) error {
+	result := r.DB.WithContext(ctx).Where("user_id = ? AND event_id = ?", userID, eventID).Delete(&models.Attendee{})
 	return result.Error
 }
 
 // DeleteByEvent removes all attendees for a specific event
-func (r *AttendeeRepository) DeleteByEvent(eventID int) error {
-	result := r.DB.Where("event_id = ?", eventID).Delete(&models.Attendee{})
+func (r *AttendeeRepository) DeleteByEvent(ctx context.Context, eventID int) error {
+	result := r.DB.WithContext(ctx).Where("event_id = ?", eventID).Delete(&models.Attendee{})
 	return result.Error
 }
 
 // DeleteByUser removes all attendee records for a specific user
-func (r *AttendeeRepository) DeleteByUser(userID int) error {
-	result := r.DB.Where("user_id = ?", userID).Delete(&models.Attendee{})
+func (r *AttendeeRepository) DeleteByUser(ctx context.Context, userID int) error {
+	result := r.DB.WithContext(ctx).Where("user_id = ?", userID).Delete(&models.Attendee{})
 	return result.Error
 }

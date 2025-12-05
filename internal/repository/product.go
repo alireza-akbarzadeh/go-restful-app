@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
@@ -15,8 +16,8 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 	return &ProductRepository{DB: db}
 }
 
-func (r *ProductRepository) Insert(product *models.Product) (*models.Product, error) {
-	result := r.DB.Create(product)
+func (r *ProductRepository) Insert(ctx context.Context, product *models.Product) (*models.Product, error) {
+	result := r.DB.WithContext(ctx).Create(product)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -24,12 +25,12 @@ func (r *ProductRepository) Insert(product *models.Product) (*models.Product, er
 }
 
 // GetAll retrieves all products with optional pagination and filters
-func (r *ProductRepository) GetAll(page, limit int, search string, categoryID int) ([]models.Product, int64, error) {
+func (r *ProductRepository) GetAll(ctx context.Context, page, limit int, search string, categoryID int) ([]models.Product, int64, error) {
 	var products []models.Product
 	var total int64
 
 	offset := (page - 1) * limit
-	query := r.DB.Model(&models.Product{})
+	query := r.DB.WithContext(ctx).Model(&models.Product{})
 
 	// Apply filters
 	if search != "" {
@@ -60,9 +61,9 @@ func (r *ProductRepository) GetAll(page, limit int, search string, categoryID in
 }
 
 // Get retrieves a product by ID
-func (r *ProductRepository) Get(id int) (*models.Product, error) {
+func (r *ProductRepository) Get(ctx context.Context, id int) (*models.Product, error) {
 	var product models.Product
-	result := r.DB.Preload("User").Preload("Categories").First(&product, id)
+	result := r.DB.WithContext(ctx).Preload("User").Preload("Categories").First(&product, id)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -73,9 +74,9 @@ func (r *ProductRepository) Get(id int) (*models.Product, error) {
 }
 
 // GetBySlug retrieves a product by its slug
-func (r *ProductRepository) GetBySlug(slug string) (*models.Product, error) {
+func (r *ProductRepository) GetBySlug(ctx context.Context, slug string) (*models.Product, error) {
 	var product models.Product
-	result := r.DB.Preload("User").Preload("Categories").Where("slug = ?", slug).First(&product)
+	result := r.DB.WithContext(ctx).Preload("User").Preload("Categories").Where("slug = ?", slug).First(&product)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -86,21 +87,21 @@ func (r *ProductRepository) GetBySlug(slug string) (*models.Product, error) {
 }
 
 // Update updates an existing product
-func (r *ProductRepository) Update(product *models.Product) error {
-	result := r.DB.Save(product)
+func (r *ProductRepository) Update(ctx context.Context, product *models.Product) error {
+	result := r.DB.WithContext(ctx).Save(product)
 	return result.Error
 }
 
 // Delete removes a product by ID
-func (r *ProductRepository) Delete(id int) error {
-	result := r.DB.Delete(&models.Product{}, id)
+func (r *ProductRepository) Delete(ctx context.Context, id int) error {
+	result := r.DB.WithContext(ctx).Delete(&models.Product{}, id)
 	return result.Error
 }
 
 // GetByUser retrieves all products created by a specific user
-func (r *ProductRepository) GetByUser(userID int) ([]models.Product, error) {
+func (r *ProductRepository) GetByUser(ctx context.Context, userID int) ([]models.Product, error) {
 	var products []models.Product
-	result := r.DB.Where("user_id = ?", userID).Preload("Categories").Find(&products)
+	result := r.DB.WithContext(ctx).Where("user_id = ?", userID).Preload("Categories").Find(&products)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -108,9 +109,9 @@ func (r *ProductRepository) GetByUser(userID int) ([]models.Product, error) {
 }
 
 // GetByCategory retrieves all products in a specific category
-func (r *ProductRepository) GetByCategory(categoryID int) ([]models.Product, error) {
+func (r *ProductRepository) GetByCategory(ctx context.Context, categoryID int) ([]models.Product, error) {
 	var products []models.Product
-	result := r.DB.Joins("JOIN product_categories ON products.id = product_categories.product_id").
+	result := r.DB.WithContext(ctx).Joins("JOIN product_categories ON products.id = product_categories.product_id").
 		Where("product_categories.category_id = ?", categoryID).
 		Preload("User").Preload("Categories").Find(&products)
 	if result.Error != nil {

@@ -45,7 +45,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 	}
 
 	// Check if the event exists
-	event, err := h.Repos.Events.Get(eventID)
+	event, err := h.Repos.Events.Get(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -62,7 +62,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 	}
 
 	// Check if a user to add exists
-	userToAdd, err := h.Repos.Users.Get(userID)
+	userToAdd, err := h.Repos.Users.Get(c.Request.Context(), userID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve user")
 		return
@@ -73,7 +73,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 	}
 
 	// Check if already attending
-	existingAttendee, err := h.Repos.Attendees.GetByEventAndUser(eventID, userID)
+	existingAttendee, err := h.Repos.Attendees.GetByEventAndUser(c.Request.Context(), eventID, userID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to check attendee status")
 		return
@@ -89,7 +89,7 @@ func (h *Handler) AddAttendee(c *gin.Context) {
 		UserID:  userID,
 	}
 
-	createdAttendee, err := h.Repos.Attendees.Insert(attendee)
+	createdAttendee, err := h.Repos.Attendees.Insert(c.Request.Context(), attendee)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to add attendee")
 		return
@@ -118,7 +118,7 @@ func (h *Handler) GetAttendees(c *gin.Context) {
 	}
 
 	// Check if the event exists
-	event, err := h.Repos.Events.Get(eventID)
+	event, err := h.Repos.Events.Get(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -128,7 +128,7 @@ func (h *Handler) GetAttendees(c *gin.Context) {
 		return
 	}
 
-	users, err := h.Repos.Attendees.GetAttendeesByEvent(eventID)
+	users, err := h.Repos.Attendees.GetAttendeesByEvent(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve attendees")
 		return
@@ -173,7 +173,7 @@ func (h *Handler) RemoveAttendee(c *gin.Context) {
 	}
 
 	// Check if the event exists
-	event, err := h.Repos.Events.Get(eventID)
+	event, err := h.Repos.Events.Get(c.Request.Context(), eventID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -190,7 +190,7 @@ func (h *Handler) RemoveAttendee(c *gin.Context) {
 	}
 
 	// Remove attendee
-	if err := h.Repos.Attendees.Delete(userID, eventID); err != nil {
+	if err := h.Repos.Attendees.Delete(c.Request.Context(), userID, eventID); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to remove attendee")
 		return
 	}
@@ -216,7 +216,7 @@ func (h *Handler) GetEventsByAttendee(c *gin.Context) {
 		return
 	}
 
-	events, err := h.Repos.Attendees.GetEventsByAttendee(userID)
+	events, err := h.Repos.Attendees.GetEventsByAttendee(c.Request.Context(), userID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve events")
 		return

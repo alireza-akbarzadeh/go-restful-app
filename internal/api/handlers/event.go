@@ -34,7 +34,7 @@ func (h *Handler) CreateEvent(c *gin.Context) {
 	}
 
 	event.OwnerID = user.ID
-	createdEvent, err := h.Repos.Events.Insert(&event)
+	createdEvent, err := h.Repos.Events.Insert(c.Request.Context(), &event)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create event")
 		return
@@ -62,7 +62,7 @@ func (h *Handler) GetEvent(c *gin.Context) {
 		return
 	}
 
-	event, err := h.Repos.Events.Get(id)
+	event, err := h.Repos.Events.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -85,7 +85,7 @@ func (h *Handler) GetEvent(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events [get]
 func (h *Handler) GetAllEvents(c *gin.Context) {
-	events, err := h.Repos.Events.GetAll()
+	events, err := h.Repos.Events.GetAll(c.Request.Context())
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve events")
 		return
@@ -125,7 +125,7 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 	}
 
 	// Check if event exists and user is the owner
-	existingEvent, err := h.Repos.Events.Get(id)
+	existingEvent, err := h.Repos.Events.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -149,7 +149,7 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 	updatedEvent.ID = id
 	updatedEvent.OwnerID = user.ID
 
-	if err := h.Repos.Events.Update(&updatedEvent); err != nil {
+	if err := h.Repos.Events.Update(c.Request.Context(), &updatedEvent); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update event")
 		return
 	}
@@ -187,7 +187,7 @@ func (h *Handler) DeleteEvent(c *gin.Context) {
 	}
 
 	// Check if event exists and user is the owner
-	existingEvent, err := h.Repos.Events.Get(id)
+	existingEvent, err := h.Repos.Events.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
 		return
@@ -202,13 +202,13 @@ func (h *Handler) DeleteEvent(c *gin.Context) {
 	}
 
 	// Delete all attendees first
-	if err := h.Repos.Attendees.DeleteByEvent(id); err != nil {
+	if err := h.Repos.Attendees.DeleteByEvent(c.Request.Context(), id); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete event attendees")
 		return
 	}
 
 	// Delete event
-	if err := h.Repos.Events.Delete(id); err != nil {
+	if err := h.Repos.Events.Delete(c.Request.Context(), id); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}

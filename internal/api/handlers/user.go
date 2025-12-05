@@ -20,7 +20,7 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/users [get]
 func (h *Handler) GetAllUsers(c *gin.Context) {
-	users, err := h.Repos.Users.GetAll()
+	users, err := h.Repos.Users.GetAll(c.Request.Context())
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve users")
 		return
@@ -65,7 +65,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	}
 
 	// Get existing user
-	existingUser, err := h.Repos.Users.Get(id)
+	existingUser, err := h.Repos.Users.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve user")
 		return
@@ -86,7 +86,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	existingUser.Email = updateData.Email
 	// Note: Password update is handled by a separate endpoint
 
-	if err := h.Repos.Users.Update(existingUser); err != nil {
+	if err := h.Repos.Users.Update(c.Request.Context(), existingUser); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
@@ -129,7 +129,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.Repos.Users.Delete(id); err != nil {
+	if err := h.Repos.Users.Delete(c.Request.Context(), id); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete user")
 		return
 	}

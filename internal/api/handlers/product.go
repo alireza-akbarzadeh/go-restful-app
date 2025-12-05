@@ -41,7 +41,7 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 		product.Slug = utils.GenerateSlug(product.Name)
 	}
 
-	createdProduct, err := h.Repos.Products.Insert(&product)
+	createdProduct, err := h.Repos.Products.Insert(c.Request.Context(), &product)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create product")
 		return
@@ -69,7 +69,7 @@ func (h *Handler) GetAllProducts(c *gin.Context) {
 	search := c.Query("search")
 	categoryID := helpers.ParseQueryInt(c, "category_id", 0)
 
-	products, total, err := h.Repos.Products.GetAll(page, limit, search, categoryID)
+	products, total, err := h.Repos.Products.GetAll(c.Request.Context(), page, limit, search, categoryID)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve products")
 		return
@@ -99,9 +99,9 @@ func (h *Handler) GetProduct(c *gin.Context) {
 
 	// Try to parse as ID first
 	if id, parseErr := strconv.Atoi(idOrSlug); parseErr == nil {
-		product, err = h.Repos.Products.Get(id)
+		product, err = h.Repos.Products.Get(c.Request.Context(), id)
 	} else {
-		product, err = h.Repos.Products.GetBySlug(idOrSlug)
+		product, err = h.Repos.Products.GetBySlug(c.Request.Context(), idOrSlug)
 	}
 
 	if err != nil {
@@ -143,7 +143,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	existingProduct, err := h.Repos.Products.Get(id)
+	existingProduct, err := h.Repos.Products.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
 		return
@@ -181,7 +181,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	existingProduct.Weight = updateData.Weight
 	existingProduct.Dimensions = updateData.Dimensions
 
-	if err := h.Repos.Products.Update(existingProduct); err != nil {
+	if err := h.Repos.Products.Update(c.Request.Context(), existingProduct); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update product")
 		return
 	}
@@ -215,7 +215,7 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	existingProduct, err := h.Repos.Products.Get(id)
+	existingProduct, err := h.Repos.Products.Get(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
 		return
@@ -231,7 +231,7 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	if err := h.Repos.Products.Delete(id); err != nil {
+	if err := h.Repos.Products.Delete(c.Request.Context(), id); err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete product")
 		return
 	}
@@ -251,7 +251,7 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 // @Router       /api/v1/products/slug/{slug} [get]
 func (h *Handler) GetProductBySlug(c *gin.Context) {
 	slug := c.Param("slug")
-	product, err := h.Repos.Products.GetBySlug(slug)
+	product, err := h.Repos.Products.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
 		return
@@ -280,7 +280,7 @@ func (h *Handler) GetProductsByCategory(c *gin.Context) {
 		return
 	}
 
-	products, err := h.Repos.Products.GetByCategory(id)
+	products, err := h.Repos.Products.GetByCategory(c.Request.Context(), id)
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve products")
 		return
