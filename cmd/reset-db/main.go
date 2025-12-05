@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -13,6 +14,15 @@ func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL environment variable is required")
+	}
+
+	// Safety check: Ask for confirmation
+	fmt.Print("⚠️  WARNING: This will DROP ALL TABLES and reset the database. Are you sure? (y/N): ")
+	var confirm string
+	fmt.Scanln(&confirm)
+	if confirm != "y" && confirm != "Y" {
+		log.Println("Operation cancelled.")
+		return
 	}
 
 	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
@@ -28,6 +38,9 @@ func main() {
 		&models.Event{},
 		&models.Category{},
 		&models.User{},
+		&models.BasketItem{},
+		&models.Basket{},
+		&models.Product{},
 	)
 	if err != nil {
 		log.Fatal("Failed to drop tables:", err)
