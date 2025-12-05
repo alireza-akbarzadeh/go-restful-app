@@ -13,6 +13,6 @@ type Comment struct {
 	CreatedAt time.Time `json:"createdAt"`
 
 	// Associations (optional, for preloading if needed)
-	User  User  `json:"user,omitempty" gorm:"foreignKey:UserID"`
-	Event Event `json:"-" gorm:"foreignKey:EventID"`
+	User  User  `json:"user,omitempty" gorm:"foreignKey:UserID" binding:"-"`
+	Event Event `json:"-" gorm:"foreignKey:EventID" binding:"-"`
 }

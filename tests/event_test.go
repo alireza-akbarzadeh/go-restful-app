@@ -116,7 +116,10 @@ func TestEventManagement(t *testing.T) {
 			OwnerID: userID,
 		}
 
+		mockAttendeeRepo := ts.Mocks.Attendees.(*mocks.AttendeeRepositoryMock)
+
 		mockEventRepo.On("Get", mock.Anything, eventID).Return(event, nil).Once()
+		mockAttendeeRepo.On("DeleteByEvent", mock.Anything, eventID).Return(nil).Once()
 		mockEventRepo.On("Delete", mock.Anything, eventID).Return(nil).Once()
 
 		w := ts.createAuthenticatedRequest("DELETE", "/api/v1/events/"+strconv.Itoa(eventID), token, nil)

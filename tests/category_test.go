@@ -36,10 +36,10 @@ func TestCategoryManagement(t *testing.T) {
 			Description: "Technology-related events",
 		}
 
-		// Expect Create call
-		mockCategoryRepo.On("Create", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
+		// Expect Insert call
+		mockCategoryRepo.On("Insert", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
 			return c.Name == category.Name && c.Description == category.Description
-		})).Return(nil).Once()
+		})).Return(&models.Category{ID: 1, Name: category.Name, Description: category.Description}, nil).Once()
 
 		w := ts.createAuthenticatedRequest("POST", "/api/v1/categories", token, category)
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -131,9 +131,9 @@ func TestCategoryEdgeCases(t *testing.T) {
 			Description: "",
 		}
 
-		mockCategoryRepo.On("Create", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
+		mockCategoryRepo.On("Insert", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
 			return c.Name == category.Name && c.Description == ""
-		})).Return(nil).Once()
+		})).Return(&models.Category{ID: 2, Name: category.Name, Description: ""}, nil).Once()
 
 		w := ts.createAuthenticatedRequest("POST", "/api/v1/categories", token, category)
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -151,9 +151,9 @@ func TestCategoryEdgeCases(t *testing.T) {
 			Description: "Category with special characters",
 		}
 
-		mockCategoryRepo.On("Create", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
+		mockCategoryRepo.On("Insert", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
 			return c.Name == category.Name
-		})).Return(nil).Once()
+		})).Return(&models.Category{ID: 3, Name: category.Name}, nil).Once()
 
 		w := ts.createAuthenticatedRequest("POST", "/api/v1/categories", token, category)
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -171,9 +171,9 @@ func TestCategoryEdgeCases(t *testing.T) {
 			Description: "Category with very long name",
 		}
 
-		mockCategoryRepo.On("Create", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
+		mockCategoryRepo.On("Insert", mock.Anything, mock.MatchedBy(func(c *models.Category) bool {
 			return c.Name == longName
-		})).Return(nil).Once()
+		})).Return(&models.Category{ID: 4, Name: longName}, nil).Once()
 
 		w := ts.createAuthenticatedRequest("POST", "/api/v1/categories", token, category)
 		assert.Equal(t, http.StatusCreated, w.Code)
