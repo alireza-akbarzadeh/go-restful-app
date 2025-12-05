@@ -5,47 +5,19 @@ services:
     build:
       context: .
       dockerfile: ci/docker/Dockerfile
-    container_name: go-restful-api
+    container_name: ginflow-api
     ports:
       - "${PORT:-8080}:8080"
     environment:
       - PORT=8080
       - JWT_SECRET=${JWT_SECRET:-default-secret-change-this}
-      - DATABASE_PATH=/app/data/data.db
+      - DATABASE_URL=${DATABASE_URL} # Connects to your Neon DB
       - APP_ENV=${APP_ENV:-development}
-    volumes:
-      # Mount the database directory to persist data
-      - ./data:/app/data
-      # Mount source code for development (optional - remove in production)
-      - .:/app
+    # No volumes needed for DB data since it's in the cloud
     restart: unless-stopped
     networks:
       - app-network
 
-  # Optional: Add a database backup service
-  backup:
-    image: alpine:latest
-    container_name: db-backup
-    volumes:
-      - ./data:/data
-      - ./backups:/backups
-    command: >
-      sh -c "
-        while true; do
-          echo 'Creating backup...'
-          cp /data/data.db /backups/backup-$$(date +%Y%m%d-%H%M%S).db
-          echo 'Backup created'
-          sleep 86400
-        done
-      "
-    networks:
-      - app-network
-    profiles:
-      - backup
-
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  db-data:
