@@ -140,6 +140,65 @@ func (r *EventRepository) ListWithPagination(ctx context.Context, req *paginatio
 	return events, paginationResp, nil
 }
 
+// ListWithAdvancedPagination retrieves events with advanced pagination, filtering, sorting, and search
+func (r *EventRepository) ListWithAdvancedPagination(ctx context.Context, req *pagination.AdvancedPaginationRequest) ([]*models.Event, *pagination.AdvancedPaginatedResult, error) {
+	logging.Debug(ctx, "retrieving events with advanced pagination",
+		"page", req.Page,
+		"page_size", req.PageSize,
+		"type", req.Type,
+		"search", req.Search,
+	)
+
+	var events []*models.Event
+	var total int64
+
+	// Build pagination query
+	builder := pagination.NewPaginationBuilder(r.DB.WithContext(ctx).Model(&models.Event{})).
+		WithRequest(req).
+		AllowFilters("name", "location", "owner_id", "start_date", "end_date", "created_at", "status").
+		AllowSorts("name", "start_date", "end_date", "created_at", "updated_at").
+		SearchColumns("name", "description", "location").
+		DefaultSort("created_at", pagination.SortDesc)
+
+	// Get count if needed
+	if req.IncludeTotal {
+		countQuery := r.DB.WithContext(ctx).Model(&models.Event{})
+		// Apply filters and search for count
+		for _, filter := range req.Filters {
+			countQuery = pagination.FilterBy(filter)(countQuery)
+		}
+		if req.Search != "" {
+			countQuery = pagination.Search(req.Search, "name", "description", "location")(countQuery)
+		}
+		countQuery.Count(&total)
+	}
+
+	// Execute main query
+	query := builder.Build()
+	if err := query.Preload("Owner").Find(&events).Error; err != nil {
+		logging.Error(ctx, "failed to retrieve events with advanced pagination", err)
+		return nil, nil, appErrors.New(appErrors.ErrDatabaseOperation, "failed to retrieve events")
+	}
+
+	// Get first and last IDs for cursor pagination
+	var firstID, lastID int
+	if len(events) > 0 {
+		firstID = events[0].ID
+		lastID = events[len(events)-1].ID
+	}
+
+	// Build response
+	result := pagination.BuildResponse(events, req, total, len(events), firstID, lastID)
+
+	logging.Info(ctx, "events retrieved with advanced pagination",
+		"count", len(events),
+		"total", total,
+		"page", req.Page,
+	)
+
+	return events, result, nil
+}
+
 // GetByOwnerID retrieves events by owner ID
 func (r *EventRepository) GetByOwnerID(ctx context.Context, ownerID int) ([]*models.Event, error) {
 	logging.Debug(ctx, "retrieving events by owner ID", "owner_id", ownerID)

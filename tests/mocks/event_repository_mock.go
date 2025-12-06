@@ -57,6 +57,17 @@ func (m *EventRepositoryMock) ListWithPagination(ctx context.Context, req *pagin
 	return args.Get(0).([]*models.Event), args.Get(1).(*pagination.PaginationResponse), args.Error(2)
 }
 
+func (m *EventRepositoryMock) ListWithAdvancedPagination(ctx context.Context, req *pagination.AdvancedPaginationRequest) ([]*models.Event, *pagination.AdvancedPaginatedResult, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, nil, args.Error(2)
+	}
+	if args.Get(1) == nil {
+		return args.Get(0).([]*models.Event), nil, args.Error(2)
+	}
+	return args.Get(0).([]*models.Event), args.Get(1).(*pagination.AdvancedPaginatedResult), args.Error(2)
+}
+
 func (m *EventRepositoryMock) GetByOwnerID(ctx context.Context, ownerID int) ([]*models.Event, error) {
 	args := m.Called(ctx, ownerID)
 	if args.Get(0) == nil {

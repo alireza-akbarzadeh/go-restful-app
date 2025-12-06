@@ -8,6 +8,7 @@ import (
 	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
 	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
+	"github.com/alireza-akbarzadeh/ginflow/internal/pagination"
 	"github.com/alireza-akbarzadeh/ginflow/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -56,39 +57,50 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, createdProduct)
 }
 
-// GetAllProducts retrieves all products
+// GetAllProducts retrieves all products with advanced pagination
 // @Summary      Get all products
-// @Description  Get a list of all products with pagination and optional filtering
+// @Description  Get a list of all products with advanced pagination, filtering, sorting, and search
 // @Tags         Products
 // @Accept       json
 // @Produce      json
-// @Param        page         query     int     false  "Page number"
-// @Param        limit        query     int     false  "Items per page"
-// @Param        search       query     string  false  "Search by name or slug"
-// @Param        category_id  query     int     false  "Filter by category ID"
-// @Success      200          {object}  map[string]interface{}
-// @Failure      500          {object}  helpers.ErrorResponse
+// @Param        page        query     int     false  "Page number (default: 1)"
+// @Param        page_size   query     int     false  "Page size (default: 20, max: 100)"
+// @Param        type        query     string  false  "Pagination type: 'offset' or 'cursor' (default: offset)"
+// @Param        cursor      query     string  false  "Cursor for cursor-based pagination"
+// @Param        sort        query     string  false  "Sort fields (e.g., '-created_at,name:asc,price:desc')"
+// @Param        search      query     string  false  "Search term for name, slug, description"
+// @Param        name[eq]    query     string  false  "Filter by exact name"
+// @Param        name[like]  query     string  false  "Filter by name (partial match)"
+// @Param        price[gte]  query     number  false  "Filter by minimum price"
+// @Param        price[lte]  query     number  false  "Filter by maximum price"
+// @Param        user_id[eq] query     int     false  "Filter by user ID"
+// @Success      200         {object}  pagination.AdvancedPaginatedResult{data=[]models.Product}
+// @Failure      500         {object}  helpers.ErrorResponse
 // @Router       /api/v1/products [get]
 func (h *Handler) GetAllProducts(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	page := helpers.ParseQueryInt(c, "page", 1)
-	limit := helpers.ParseQueryInt(c, "limit", 10)
-	search := c.Query("search")
-	categoryID := helpers.ParseQueryInt(c, "category_id", 0)
+	// Parse advanced pagination parameters from context
+	req := pagination.ParseFromContext(c)
 
-	logging.Debug(ctx, "retrieving all products", "page", page, "limit", limit, "search", search)
+	logging.Debug(ctx, "retrieving all products with advanced pagination",
+		"page", req.Page,
+		"page_size", req.PageSize,
+		"type", req.Type,
+		"search", req.Search,
+	)
 
-	products, total, err := h.Repos.Products.GetAll(ctx, page, limit, search, categoryID)
+	products, result, err := h.Repos.Products.ListWithAdvancedPagination(ctx, req)
 	if helpers.HandleError(c, err, "Failed to retrieve products") {
 		return
 	}
 
-	logging.Debug(ctx, "products retrieved successfully", "count", len(products), "total", total)
-	helpers.RespondWithPagination(c, products, total, page, limit, gin.H{
-		"search":      search,
-		"category_id": categoryID,
-	})
+	logging.Debug(ctx, "products retrieved successfully",
+		"count", len(products),
+		"page", req.Page,
+	)
+
+	c.JSON(http.StatusOK, result)
 }
 
 // GetProduct retrieves a product by ID or Slug

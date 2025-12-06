@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
+	"github.com/alireza-akbarzadeh/ginflow/internal/pagination"
 	"gorm.io/gorm"
 )
 
@@ -58,6 +59,50 @@ func (r *ProductRepository) GetAll(ctx context.Context, page, limit int, search 
 	}
 
 	return products, total, nil
+}
+
+// ListWithAdvancedPagination retrieves products with advanced pagination, filtering, sorting, and search
+func (r *ProductRepository) ListWithAdvancedPagination(ctx context.Context, req *pagination.AdvancedPaginationRequest) ([]models.Product, *pagination.AdvancedPaginatedResult, error) {
+	var products []models.Product
+	var total int64
+
+	// Build pagination query
+	builder := pagination.NewPaginationBuilder(r.DB.WithContext(ctx).Model(&models.Product{})).
+		WithRequest(req).
+		AllowFilters("name", "slug", "user_id", "price", "status", "created_at").
+		AllowSorts("name", "price", "created_at", "updated_at").
+		SearchColumns("name", "slug", "description").
+		DefaultSort("created_at", pagination.SortDesc)
+
+	// Get count if needed
+	if req.IncludeTotal {
+		countQuery := r.DB.WithContext(ctx).Model(&models.Product{})
+		for _, filter := range req.Filters {
+			countQuery = pagination.FilterBy(filter)(countQuery)
+		}
+		if req.Search != "" {
+			countQuery = pagination.Search(req.Search, "name", "slug", "description")(countQuery)
+		}
+		countQuery.Count(&total)
+	}
+
+	// Execute main query
+	query := builder.Build()
+	if err := query.Preload("User").Preload("Categories").Find(&products).Error; err != nil {
+		return nil, nil, err
+	}
+
+	// Get first and last IDs for cursor pagination
+	var firstID, lastID int
+	if len(products) > 0 {
+		firstID = products[0].ID
+		lastID = products[len(products)-1].ID
+	}
+
+	// Build response
+	result := pagination.BuildResponse(products, req, total, len(products), firstID, lastID)
+
+	return products, result, nil
 }
 
 // Get retrieves a product by ID

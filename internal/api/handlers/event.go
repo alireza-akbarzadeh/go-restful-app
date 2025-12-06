@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
 	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
@@ -81,42 +80,45 @@ func (h *Handler) GetEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, event)
 }
 
-// GetAllEvents retrieves all events with pagination
+// GetAllEvents retrieves all events with advanced pagination
 // @Summary      Get all events
-// @Description  Get a paginated list of all events
+// @Description  Get a paginated list of all events with filtering, sorting, and search
 // @Tags         Events
 // @Accept       json
 // @Produce      json
-// @Param        page      query     int     false  "Page number (default: 1)"
-// @Param        page_size query     int     false  "Page size (default: 20)"
-// @Success      200  {object}  helpers.PaginatedResponse{data=[]models.Event}
+// @Param        page        query     int     false  "Page number (default: 1)"
+// @Param        page_size   query     int     false  "Page size (default: 20, max: 100)"
+// @Param        type        query     string  false  "Pagination type: 'offset' or 'cursor' (default: offset)"
+// @Param        cursor      query     string  false  "Cursor for cursor-based pagination"
+// @Param        sort        query     string  false  "Sort fields (e.g., '-created_at,name:asc')"
+// @Param        search      query     string  false  "Search term for name, description, location"
+// @Param        name[eq]    query     string  false  "Filter by exact name"
+// @Param        name[like]  query     string  false  "Filter by name (partial match)"
+// @Param        location[eq] query    string  false  "Filter by location"
+// @Param        owner_id[eq] query    int     false  "Filter by owner ID"
+// @Success      200  {object}  pagination.AdvancedPaginatedResult{data=[]models.Event}
 // @Failure      400  {object}  helpers.ErrorResponse
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events [get]
 func (h *Handler) GetAllEvents(c *gin.Context) {
 	ctx := c.Request.Context()
-	logging.Debug(ctx, "handling GetAllEvents request")
+	logging.Debug(ctx, "handling GetAllEvents request with advanced pagination")
 
-	// Parse pagination parameters
-	req := pagination.NewPaginationRequest()
-	if page := c.Query("page"); page != "" {
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			req.Page = p
-		}
-	}
-	if pageSize := c.Query("page_size"); pageSize != "" {
-		if ps, err := strconv.Atoi(pageSize); err == nil && ps > 0 && ps <= 100 {
-			req.PageSize = ps
-		}
-	}
+	// Parse advanced pagination parameters from context
+	req := pagination.ParseFromContext(c)
 
-	events, paginationResp, err := h.Repos.Events.ListWithPagination(ctx, req)
+	events, result, err := h.Repos.Events.ListWithAdvancedPagination(ctx, req)
 	if helpers.HandleError(c, err, "Failed to retrieve events") {
 		return
 	}
 
-	logging.Info(ctx, "events retrieved successfully", "count", len(events), "page", req.Page)
-	helpers.RespondWithPaginatedData(c, http.StatusOK, events, paginationResp)
+	logging.Info(ctx, "events retrieved successfully",
+		"count", len(events),
+		"page", req.Page,
+		"type", req.Type,
+	)
+
+	c.JSON(http.StatusOK, result)
 }
 
 // UpdateEvent updates an existing event
