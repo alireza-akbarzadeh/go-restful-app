@@ -136,8 +136,7 @@ type BookRepositoryInterface interface {
     // Read
     Get(ctx context.Context, id int) (*models.Book, error)
     GetByISBN(ctx context.Context, isbn string) (*models.Book, error)
-    GetAll(ctx context.Context, page, limit int) ([]models.Book, int64, error)
-    ListWithAdvancedPagination(ctx context.Context, req *query.AdvancedPaginationRequest) ([]models.Book, *query.AdvancedPaginatedResult, error)
+    GetAll(ctx context.Context, req *query.QueryParams) ([]models.Book, *query.PaginatedList, error)
     GetByUser(ctx context.Context, userID int) ([]models.Book, error)
 
     // Update
@@ -222,45 +221,18 @@ func (r *BookRepository) GetByISBN(ctx context.Context, isbn string) (*models.Bo
     return &book, nil
 }
 
-// GetAll retrieves all books with basic pagination
-func (r *BookRepository) GetAll(ctx context.Context, page, limit int) ([]models.Book, int64, error) {
+// GetAll retrieves books with advanced filtering, sorting, and pagination
+func (r *BookRepository) GetAll(ctx context.Context, req *query.QueryParams) ([]models.Book, *query.PaginatedList, error) {
     var books []models.Book
     var total int64
 
-    offset := (page - 1) * limit
-
-    // Count total
-    if err := r.DB.WithContext(ctx).Model(&models.Book{}).Count(&total).Error; err != nil {
-        return nil, 0, err
-    }
-
-    // Fetch with pagination
-    result := r.DB.WithContext(ctx).
-        Preload("User").
-        Offset(offset).
-        Limit(limit).
-        Order("created_at DESC").
-        Find(&books)
-
-    if result.Error != nil {
-        return nil, 0, result.Error
-    }
-
-    return books, total, nil
-}
-
-// ListWithAdvancedPagination retrieves books with advanced filtering, sorting, and pagination
-func (r *BookRepository) ListWithAdvancedPagination(ctx context.Context, req *query.AdvancedPaginationRequest) ([]models.Book, *query.AdvancedPaginatedResult, error) {
-    var books []models.Book
-    var total int64
-
-    // Build pagination query with security controls
-    builder := query.NewPaginationBuilder(r.DB.WithContext(ctx).Model(&models.Book{})).
+    // Build query with security controls
+    builder := query.NewQueryBuilder(r.DB.WithContext(ctx).Model(&models.Book{})).
         WithRequest(req).
         AllowFilters("title", "author", "user_id", "price", "created_at").  // Whitelist filter fields
         AllowSorts("title", "author", "price", "created_at", "updated_at"). // Whitelist sort fields
         SearchColumns("title", "author", "description").                     // Searchable columns
-        DefaultSort("created_at", query.SortDesc)                       // Default sort order
+        DefaultSort("created_at", query.SortDesc)                            // Default sort order
 
     // Get count if needed
     if req.IncludeTotal {
@@ -274,9 +246,9 @@ func (r *BookRepository) ListWithAdvancedPagination(ctx context.Context, req *qu
         countQuery.Count(&total)
     }
 
-    // Execute query
-    query := builder.Build()
-    if err := query.Preload("User").Preload("Categories").Find(&books).Error; err != nil {
+    // Execute query (use dbQuery to avoid shadowing package name)
+    dbQuery := builder.Build()
+    if err := dbQuery.Preload("User").Preload("Categories").Find(&books).Error; err != nil {
         return nil, nil, err
     }
 
@@ -450,13 +422,13 @@ func (h *Handler) CreateBook(c *gin.Context) {
 // @Param        author[eq]  query     string  false  "Filter by exact author"
 // @Param        price[gte]  query     number  false  "Filter by minimum price"
 // @Param        price[lte]  query     number  false  "Filter by maximum price"
-// @Success      200         {object}  query.AdvancedPaginatedResult{data=[]models.Book}
+// @Success      200         {object}  query.PaginatedList{data=[]models.Book}
 // @Failure      500         {object}  helpers.ErrorResponse
 // @Router       /api/v1/books [get]
 func (h *Handler) GetAllBooks(c *gin.Context) {
     ctx := c.Request.Context()
 
-    // Parse pagination from query params
+    // Parse query parameters (pagination, filtering, sorting, search)
     req := query.ParseFromContext(c)
 
     logging.Debug(ctx, "retrieving books",
@@ -465,7 +437,7 @@ func (h *Handler) GetAllBooks(c *gin.Context) {
         "search", req.Search,
     )
 
-    books, result, err := h.Repos.Books.ListWithAdvancedPagination(ctx, req)
+    books, result, err := h.Repos.Books.GetAll(ctx, req)
     if helpers.HandleError(c, err, "Failed to retrieve books") {
         return
     }
@@ -777,17 +749,12 @@ func (m *MockBookRepository) GetByISBN(ctx context.Context, isbn string) (*model
     return args.Get(0).(*models.Book), args.Error(1)
 }
 
-func (m *MockBookRepository) GetAll(ctx context.Context, page, limit int) ([]models.Book, int64, error) {
-    args := m.Called(ctx, page, limit)
-    return args.Get(0).([]models.Book), args.Get(1).(int64), args.Error(2)
-}
-
-func (m *MockBookRepository) ListWithAdvancedPagination(ctx context.Context, req *query.AdvancedPaginationRequest) ([]models.Book, *query.AdvancedPaginatedResult, error) {
+func (m *MockBookRepository) GetAll(ctx context.Context, req *query.QueryParams) ([]models.Book, *query.PaginatedList, error) {
     args := m.Called(ctx, mock.Anything)
     if args.Get(0) == nil {
         return nil, nil, args.Error(2)
     }
-    return args.Get(0).([]models.Book), args.Get(1).(*query.AdvancedPaginatedResult), args.Error(2)
+    return args.Get(0).([]models.Book), args.Get(1).(*query.PaginatedList), args.Error(2)
 }
 
 func (m *MockBookRepository) Update(ctx context.Context, book *models.Book) error {
@@ -858,17 +825,21 @@ func TestBookManagement(t *testing.T) {
             {ID: 2, Title: "Book 2", Author: "Author 2"},
         }
 
-        result := &query.AdvancedPaginatedResult{
-            Data: books,
-            Pagination: query.AdvancedPaginationResponse{
-                CurrentPage: 1,
+        result := &query.PaginatedList{
+            Success: true,
+            Data:    books,
+            Pagination: &query.PageInfo{
+                Page:        1,
                 PageSize:    20,
                 TotalItems:  2,
                 TotalPages:  1,
+                HasNextPage: false,
+                HasPrevPage: false,
+                Count:       2,
             },
         }
 
-        suite.MockBooks.On("ListWithAdvancedPagination", mock.Anything, mock.Anything).Return(books, result, nil)
+        suite.MockBooks.On("GetAll", mock.Anything, mock.Anything).Return(books, result, nil)
 
         w := suite.MakeRequest("GET", "/api/v1/books", "")
 
@@ -1131,7 +1102,7 @@ func (r *Repository) CreateWithRelations(ctx context.Context, item *Model) error
 ### 6. Whitelist Filter/Sort Fields
 
 ```go
-builder := query.NewPaginationBuilder(db).
+builder := query.NewQueryBuilder(db).
     AllowFilters("name", "status", "price").  // Only these can be filtered
     AllowSorts("name", "created_at")          // Only these can be sorted
 ```
@@ -1280,7 +1251,7 @@ When creating a new API resource:
 - [ ] Add binding tags for validation
 - [ ] Create interface in `internal/repository/interfaces/`
 - [ ] Implement repository in `internal/repository/`
-- [ ] Include `ListWithAdvancedPagination` method
+- [ ] Include `GetAll` method with `QueryParams` support
 - [ ] Register in `internal/repository/repository.go`
 - [ ] Create handlers in `internal/api/handlers/`
 - [ ] Add Swagger annotations
