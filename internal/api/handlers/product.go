@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/alireza-akbarzadeh/ginflow/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -24,29 +26,33 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/products [post]
 func (h *Handler) CreateProduct(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var product models.Product
 	if !helpers.BindJSON(c, &product) {
 		return
 	}
 
-	// Get authenticated user using the helper
+	// Get authenticated user
 	user, ok := helpers.GetAuthenticatedUser(c)
 	if !ok {
 		return
 	}
 	product.UserID = user.ID
 
+	logging.Debug(ctx, "creating new product", "name", product.Name, "user_id", user.ID)
+
 	// Generate slug if not provided
 	if product.Slug == "" {
 		product.Slug = utils.GenerateSlug(product.Name)
 	}
 
-	createdProduct, err := h.Repos.Products.Insert(c.Request.Context(), &product)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create product")
+	createdProduct, err := h.Repos.Products.Insert(ctx, &product)
+	if helpers.HandleError(c, err, "Failed to create product") {
 		return
 	}
 
+	logging.Info(ctx, "product created successfully", "product_id", createdProduct.ID, "name", createdProduct.Name)
 	c.JSON(http.StatusCreated, createdProduct)
 }
 
@@ -64,17 +70,21 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 // @Failure      500          {object}  helpers.ErrorResponse
 // @Router       /api/v1/products [get]
 func (h *Handler) GetAllProducts(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	page := helpers.ParseQueryInt(c, "page", 1)
 	limit := helpers.ParseQueryInt(c, "limit", 10)
 	search := c.Query("search")
 	categoryID := helpers.ParseQueryInt(c, "category_id", 0)
 
-	products, total, err := h.Repos.Products.GetAll(c.Request.Context(), page, limit, search, categoryID)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve products")
+	logging.Debug(ctx, "retrieving all products", "page", page, "limit", limit, "search", search)
+
+	products, total, err := h.Repos.Products.GetAll(ctx, page, limit, search, categoryID)
+	if helpers.HandleError(c, err, "Failed to retrieve products") {
 		return
 	}
 
+	logging.Debug(ctx, "products retrieved successfully", "count", len(products), "total", total)
 	helpers.RespondWithPagination(c, products, total, page, limit, gin.H{
 		"search":      search,
 		"category_id": categoryID,
@@ -93,23 +103,24 @@ func (h *Handler) GetAllProducts(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/products/{id} [get]
 func (h *Handler) GetProduct(c *gin.Context) {
+	ctx := c.Request.Context()
 	idOrSlug := c.Param("id")
+
 	var product *models.Product
 	var err error
 
 	// Try to parse as ID first
 	if id, parseErr := strconv.Atoi(idOrSlug); parseErr == nil {
-		product, err = h.Repos.Products.Get(c.Request.Context(), id)
+		product, err = h.Repos.Products.Get(ctx, id)
 	} else {
-		product, err = h.Repos.Products.GetBySlug(c.Request.Context(), idOrSlug)
+		product, err = h.Repos.Products.GetBySlug(ctx, idOrSlug)
 	}
 
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
+	if helpers.HandleError(c, err, "Failed to retrieve product") {
 		return
 	}
 	if product == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Product not found")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrNotFound, "Product not found"), "")
 		return
 	}
 
@@ -133,27 +144,30 @@ func (h *Handler) GetProduct(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/products/{id} [put]
 func (h *Handler) UpdateProduct(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	id, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		return
 	}
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
-	existingProduct, err := h.Repos.Products.Get(c.Request.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
+	logging.Debug(ctx, "updating product", "product_id", id, "user_id", user.ID)
+
+	existingProduct, err := h.Repos.Products.Get(ctx, id)
+	if helpers.HandleError(c, err, "Failed to retrieve product") {
 		return
 	}
 	if existingProduct == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Product not found")
+		helpers.RespondWithAppError(c, appErrors.Newf(appErrors.ErrNotFound, "product with ID %d not found", id), "")
 		return
 	}
 	if existingProduct.UserID != user.ID {
-		helpers.RespondWithError(c, http.StatusForbidden, "You do not have permission to update this product")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrForbidden, "You do not have permission to update this product"), "")
 		return
 	}
 
@@ -181,11 +195,12 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	existingProduct.Weight = updateData.Weight
 	existingProduct.Dimensions = updateData.Dimensions
 
-	if err := h.Repos.Products.Update(c.Request.Context(), existingProduct); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update product")
+	if err := h.Repos.Products.Update(ctx, existingProduct); err != nil {
+		helpers.HandleError(c, err, "Failed to update product")
 		return
 	}
 
+	logging.Info(ctx, "product updated successfully", "product_id", id, "name", existingProduct.Name)
 	c.JSON(http.StatusOK, existingProduct)
 }
 
@@ -204,37 +219,41 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/products/{id} [delete]
 func (h *Handler) DeleteProduct(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	id, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		return
 	}
 
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
-	existingProduct, err := h.Repos.Products.Get(c.Request.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
+	logging.Debug(ctx, "deleting product", "product_id", id, "user_id", user.ID)
+
+	existingProduct, err := h.Repos.Products.Get(ctx, id)
+	if helpers.HandleError(c, err, "Failed to retrieve product") {
 		return
 	}
 	if existingProduct == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Product not found")
+		helpers.RespondWithAppError(c, appErrors.Newf(appErrors.ErrNotFound, "product with ID %d not found", id), "")
 		return
 	}
 
 	// Check ownership
 	if existingProduct.UserID != user.ID {
-		helpers.RespondWithError(c, http.StatusForbidden, "You are not allowed to delete this product")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrForbidden, "You are not allowed to delete this product"), "")
 		return
 	}
 
-	if err := h.Repos.Products.Delete(c.Request.Context(), id); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete product")
+	if err := h.Repos.Products.Delete(ctx, id); err != nil {
+		helpers.HandleError(c, err, "Failed to delete product")
 		return
 	}
+
+	logging.Info(ctx, "product deleted successfully", "product_id", id)
 	c.Status(http.StatusNoContent)
 }
 
@@ -250,14 +269,17 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/products/slug/{slug} [get]
 func (h *Handler) GetProductBySlug(c *gin.Context) {
+	ctx := c.Request.Context()
 	slug := c.Param("slug")
-	product, err := h.Repos.Products.GetBySlug(c.Request.Context(), slug)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
+
+	logging.Debug(ctx, "retrieving product by slug", "slug", slug)
+
+	product, err := h.Repos.Products.GetBySlug(ctx, slug)
+	if helpers.HandleError(c, err, "Failed to retrieve product") {
 		return
 	}
 	if product == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Product not found")
+		helpers.RespondWithAppError(c, appErrors.Newf(appErrors.ErrNotFound, "product with slug '%s' not found", slug), "")
 		return
 	}
 
@@ -275,16 +297,20 @@ func (h *Handler) GetProductBySlug(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/products/category/{id} [get]
 func (h *Handler) GetProductsByCategory(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	id, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		return
 	}
 
-	products, err := h.Repos.Products.GetByCategory(c.Request.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve products")
+	logging.Debug(ctx, "retrieving products by category", "category_id", id)
+
+	products, err := h.Repos.Products.GetByCategory(ctx, id)
+	if helpers.HandleError(c, err, "Failed to retrieve products") {
 		return
 	}
 
+	logging.Debug(ctx, "products retrieved by category", "category_id", id, "count", len(products))
 	c.JSON(http.StatusOK, products)
 }

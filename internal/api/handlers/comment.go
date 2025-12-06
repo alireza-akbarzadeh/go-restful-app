@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/gin-gonic/gin"
 )
@@ -25,20 +27,19 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id}/comments [post]
 func (h *Handler) CreateComment(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	eventID, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
 		return
 	}
 
+	logging.Debug(ctx, "creating comment for event", "event_id", eventID)
+
 	// Check if event exists
-	event, err := h.Repos.Events.Get(c.Request.Context(), eventID)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Database error")
-		return
-	}
-	if event == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Event not found")
+	_, err = h.Repos.Events.Get(ctx, eventID)
+	if helpers.HandleError(c, err, "Failed to retrieve event") {
 		return
 	}
 
@@ -57,12 +58,12 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	comment.UserID = user.ID
 	comment.CreatedAt = time.Now()
 
-	createdComment, err := h.Repos.Comments.Insert(c.Request.Context(), &comment)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create comment")
+	createdComment, err := h.Repos.Comments.Insert(ctx, &comment)
+	if helpers.HandleError(c, err, "Failed to create comment") {
 		return
 	}
 
+	logging.Info(ctx, "comment created successfully", "comment_id", createdComment.ID, "event_id", eventID, "user_id", user.ID)
 	c.JSON(http.StatusCreated, createdComment)
 }
 
@@ -77,18 +78,22 @@ func (h *Handler) CreateComment(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/events/{id}/comments [get]
 func (h *Handler) GetEventComments(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	eventID, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
 		return
 	}
 
-	comments, err := h.Repos.Comments.GetByEvent(c.Request.Context(), eventID)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to fetch comments")
+	logging.Debug(ctx, "retrieving comments for event", "event_id", eventID)
+
+	comments, err := h.Repos.Comments.GetByEvent(ctx, eventID)
+	if helpers.HandleError(c, err, "Failed to fetch comments") {
 		return
 	}
 
+	logging.Debug(ctx, "comments retrieved successfully", "event_id", eventID, "count", len(comments))
 	c.JSON(http.StatusOK, comments)
 }
 
@@ -107,6 +112,8 @@ func (h *Handler) GetEventComments(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id}/comments/{commentId} [delete]
 func (h *Handler) DeleteComment(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	commentID, err := helpers.ParseIDParam(c, "commentId")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid comment ID")
@@ -119,27 +126,29 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 		return
 	}
 
+	logging.Debug(ctx, "deleting comment", "comment_id", commentID, "user_id", user.ID)
+
 	// Check if comment exists
-	comment, err := h.Repos.Comments.Get(c.Request.Context(), commentID)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Database error")
+	comment, err := h.Repos.Comments.Get(ctx, commentID)
+	if helpers.HandleError(c, err, "Failed to retrieve comment") {
 		return
 	}
 	if comment == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Comment not found")
+		helpers.RespondWithAppError(c, appErrors.Newf(appErrors.ErrNotFound, "comment with ID %d not found", commentID), "")
 		return
 	}
 
 	// Check ownership (only author can delete)
 	if comment.UserID != user.ID {
-		helpers.RespondWithError(c, http.StatusForbidden, "You are not allowed to delete this comment")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrForbidden, "You are not allowed to delete this comment"), "")
 		return
 	}
 
-	if err := h.Repos.Comments.Delete(c.Request.Context(), commentID); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete comment")
+	if err := h.Repos.Comments.Delete(ctx, commentID); err != nil {
+		helpers.HandleError(c, err, "Failed to delete comment")
 		return
 	}
 
+	logging.Info(ctx, "comment deleted successfully", "comment_id", commentID, "user_id", user.ID)
 	c.Status(http.StatusNoContent)
 }

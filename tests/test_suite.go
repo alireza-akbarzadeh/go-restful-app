@@ -11,6 +11,7 @@ import (
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/handlers"
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/routers"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/alireza-akbarzadeh/ginflow/internal/repository"
 	"github.com/alireza-akbarzadeh/ginflow/tests/mocks"
@@ -35,6 +36,9 @@ type TestSuite struct {
 // SetupMockTestSuite initializes the test suite with mocks
 func SetupMockTestSuite(t *testing.T) *TestSuite {
 	gin.SetMode(gin.TestMode)
+
+	// Initialize logging for tests
+	logging.InitLogger()
 
 	// Create mocks
 	mockRepos := &repository.Models{

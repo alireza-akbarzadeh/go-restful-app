@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/gin-gonic/gin"
 )
@@ -21,18 +23,23 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/profile [get]
 func (h *Handler) GetProfile(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	// Get Authenticated User
 	authUser := helpers.GetUserFromContext(c)
 	if authUser == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
+
 	// Get Profile with user Data
-	profile, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
+	profile, err := h.Repos.Profiles.GetByUserIDWithUser(ctx, authUser.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
+		logging.Error(ctx, "Failed to retrieve profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to retrieve profile")
 		return
 	}
+
 	if profile == nil {
 		profile = &models.Profile{
 			UserID: authUser.ID,
@@ -57,37 +64,45 @@ func (h *Handler) GetProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/profile [post]
 func (h *Handler) CreateProfile(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	// Get an authenticated user
 	authUser := helpers.GetUserFromContext(c)
 	if authUser == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
+
 	// Check if a profile already exists
-	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(ctx, authUser.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
+		logging.Error(ctx, "Failed to check existing profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to retrieve profile")
 		return
 	}
 	if existingProfile != nil {
-		helpers.RespondWithError(c, http.StatusConflict, "Profile already exists")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrAlreadyExists, "Profile already exists"), "Profile already exists")
 		return
 	}
+
 	// Bind Profile Data
 	var profile models.Profile
 	if err := c.ShouldBindJSON(&profile); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrInvalidInput, err.Error()), "Invalid request body")
 		return
 	}
+
 	// Set user ID and create a profile
 	profile.UserID = authUser.ID
-	createdProfile, err := h.Repos.Profiles.Insert(c.Request.Context(), &profile)
+	createdProfile, err := h.Repos.Profiles.Insert(ctx, &profile)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create profile")
+		logging.Error(ctx, "Failed to create profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to create profile")
 		return
 	}
+
 	// Return profile with user data
-	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
+	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(ctx, authUser.ID)
 	if err != nil {
 		// If preloading fails, return the created profile
 		c.JSON(http.StatusCreated, createdProfile)
@@ -111,33 +126,39 @@ func (h *Handler) CreateProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/profile [put]
 func (h *Handler) UpdateProfile(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	authUser := helpers.GetUserFromContext(c)
 	if authUser == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
+
 	// Get an existing profile
-	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(ctx, authUser.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
+		logging.Error(ctx, "Failed to retrieve profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to retrieve profile")
 		return
 	}
 
 	// Bind update data
 	var updateData models.Profile
 	if err := c.ShouldBindJSON(&updateData); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrInvalidInput, err.Error()), "Invalid request body")
 		return
 	}
+
 	// If a profile doesn't exist, create it
 	if existingProfile == nil {
 		updateData.UserID = authUser.ID
-		createdProfile, err := h.Repos.Profiles.Insert(c.Request.Context(), &updateData)
+		createdProfile, err := h.Repos.Profiles.Insert(ctx, &updateData)
 		if err != nil {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create profile")
+			logging.Error(ctx, "Failed to create profile", err, "userID", authUser.ID)
+			helpers.HandleError(c, err, "Failed to create profile")
 			return
 		}
-		profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
+		profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(ctx, authUser.ID)
 		if err != nil {
 			c.JSON(http.StatusCreated, createdProfile)
 			return
@@ -163,14 +184,16 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	existingProfile.IsPublic = updateData.IsPublic
 	existingProfile.EmailNotifications = updateData.EmailNotifications
 	existingProfile.PushNotifications = updateData.PushNotifications
-	//save updated
-	if err := h.Repos.Profiles.Update(c.Request.Context(), existingProfile); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update profile")
 
+	// Save updated profile
+	if err := h.Repos.Profiles.Update(ctx, existingProfile); err != nil {
+		logging.Error(ctx, "Failed to update profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to update profile")
+		return
 	}
-	c.JSON(http.StatusOK, existingProfile)
-	// Return an updated profile with user data
-	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(c.Request.Context(), authUser.ID)
+
+	// Return updated profile with user data
+	profileWithUser, err := h.Repos.Profiles.GetByUserIDWithUser(ctx, authUser.ID)
 	if err != nil {
 		c.JSON(http.StatusOK, existingProfile)
 		return
@@ -191,25 +214,31 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/profile [delete]
 func (h *Handler) DeleteProfile(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	// Get an authenticated user
 	authUser := helpers.GetUserFromContext(c)
 	if authUser == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
+
 	// Check if a profile exists
-	existingProfile, err := h.Repos.Profiles.GetByUserID(c.Request.Context(), authUser.ID)
+	existingProfile, err := h.Repos.Profiles.GetByUserID(ctx, authUser.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve profile")
+		logging.Error(ctx, "Failed to retrieve profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to retrieve profile")
 		return
 	}
 	if existingProfile == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Profile not found")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrNotFound, "Profile not found"), "Profile not found")
 		return
 	}
+
 	// Delete profile
-	if err := h.Repos.Profiles.DeleteByUserID(c.Request.Context(), authUser.ID); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete profile")
+	if err := h.Repos.Profiles.DeleteByUserID(ctx, authUser.ID); err != nil {
+		logging.Error(ctx, "Failed to delete profile", err, "userID", authUser.ID)
+		helpers.HandleError(c, err, "Failed to delete profile")
 		return
 	}
 

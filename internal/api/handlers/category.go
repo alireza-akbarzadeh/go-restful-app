@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/alireza-akbarzadeh/ginflow/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -23,6 +25,8 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/categories [post]
 func (h *Handler) CreateCategory(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var category models.Category
 	if !helpers.BindJSON(c, &category) {
 		return
@@ -33,9 +37,10 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 		category.Slug = utils.GenerateSlug(category.Name)
 	}
 
-	createdCategory, err := h.Repos.Categories.Insert(c.Request.Context(), &category)
+	createdCategory, err := h.Repos.Categories.Insert(ctx, &category)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create category")
+		logging.Error(ctx, "Failed to create category", err, "name", category.Name)
+		helpers.HandleError(c, err, "Failed to create category")
 		return
 	}
 
@@ -52,9 +57,12 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 // @Failure      500  {object}  helpers.ErrorResponse
 // @Router       /api/v1/categories [get]
 func (h *Handler) GetAllCategories(c *gin.Context) {
-	categories, err := h.Repos.Categories.GetAll(c.Request.Context())
+	ctx := c.Request.Context()
+
+	categories, err := h.Repos.Categories.GetAll(ctx)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve categories")
+		logging.Error(ctx, "Failed to retrieve categories", err)
+		helpers.HandleError(c, err, "Failed to retrieve categories")
 		return
 	}
 
@@ -73,14 +81,17 @@ func (h *Handler) GetAllCategories(c *gin.Context) {
 // @Failure      500    {object}  helpers.ErrorResponse
 // @Router       /api/v1/categories/{slug} [get]
 func (h *Handler) GetCategoryBySlug(c *gin.Context) {
+	ctx := c.Request.Context()
 	slug := c.Param("slug")
-	category, err := h.Repos.Categories.GetBySlug(c.Request.Context(), slug)
+
+	category, err := h.Repos.Categories.GetBySlug(ctx, slug)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve category")
+		logging.Error(ctx, "Failed to retrieve category", err, "slug", slug)
+		helpers.HandleError(c, err, "Failed to retrieve category")
 		return
 	}
 	if category == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Category not found")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrNotFound, "Category not found"), "Category not found")
 		return
 	}
 

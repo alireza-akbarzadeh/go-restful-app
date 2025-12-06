@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/gin-gonic/gin"
 )
@@ -20,15 +22,18 @@ import (
 // @Security     BearerAuth
 // @Router       /api/v1/basket [get]
 func (h *Handler) GetBasket(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
 
-	basket, err := h.Repos.Baskets.GetActiveBasket(c.Request.Context(), user.ID)
+	basket, err := h.Repos.Baskets.GetActiveBasket(ctx, user.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve basket")
+		logging.Error(ctx, "Failed to retrieve basket", err, "userID", user.ID)
+		helpers.HandleError(c, err, "Failed to retrieve basket")
 		return
 	}
 
@@ -38,8 +43,9 @@ func (h *Handler) GetBasket(c *gin.Context) {
 			UserID: &user.ID,
 			Status: "active",
 		}
-		if err := h.Repos.Baskets.CreateBasket(c.Request.Context(), basket); err != nil {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create basket")
+		if err := h.Repos.Baskets.CreateBasket(ctx, basket); err != nil {
+			logging.Error(ctx, "Failed to create basket", err, "userID", user.ID)
+			helpers.HandleError(c, err, "Failed to create basket")
 			return
 		}
 	}
@@ -67,22 +73,25 @@ type AddItemRequest struct {
 // @Security     BearerAuth
 // @Router       /api/v1/basket/items [post]
 func (h *Handler) AddItemToBasket(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
 
 	var req AddItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrInvalidInput, err.Error()), "Invalid request body")
 		return
 	}
 
 	// Get or create basket
-	basket, err := h.Repos.Baskets.GetActiveBasket(c.Request.Context(), user.ID)
+	basket, err := h.Repos.Baskets.GetActiveBasket(ctx, user.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve basket")
+		logging.Error(ctx, "Failed to retrieve basket", err, "userID", user.ID)
+		helpers.HandleError(c, err, "Failed to retrieve basket")
 		return
 	}
 	if basket == nil {
@@ -90,20 +99,22 @@ func (h *Handler) AddItemToBasket(c *gin.Context) {
 			UserID: &user.ID,
 			Status: "active",
 		}
-		if err := h.Repos.Baskets.CreateBasket(c.Request.Context(), basket); err != nil {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create basket")
+		if err := h.Repos.Baskets.CreateBasket(ctx, basket); err != nil {
+			logging.Error(ctx, "Failed to create basket", err, "userID", user.ID)
+			helpers.HandleError(c, err, "Failed to create basket")
 			return
 		}
 	}
 
 	// Get product to check price and existence
-	product, err := h.Repos.Products.Get(c.Request.Context(), req.ProductID)
+	product, err := h.Repos.Products.Get(ctx, req.ProductID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve product")
+		logging.Error(ctx, "Failed to retrieve product", err, "productID", req.ProductID)
+		helpers.HandleError(c, err, "Failed to retrieve product")
 		return
 	}
 	if product == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Product not found")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrNotFound, "Product not found"), "Product not found")
 		return
 	}
 
@@ -113,13 +124,14 @@ func (h *Handler) AddItemToBasket(c *gin.Context) {
 		UnitPrice: product.Price, // Use current price
 	}
 
-	if err := h.Repos.Baskets.AddItem(c.Request.Context(), basket.ID, item); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to add item to basket")
+	if err := h.Repos.Baskets.AddItem(ctx, basket.ID, item); err != nil {
+		logging.Error(ctx, "Failed to add item to basket", err, "basketID", basket.ID, "productID", req.ProductID)
+		helpers.HandleError(c, err, "Failed to add item to basket")
 		return
 	}
 
 	// Return updated basket
-	updatedBasket, _ := h.Repos.Baskets.GetActiveBasket(c.Request.Context(), user.ID)
+	updatedBasket, _ := h.Repos.Baskets.GetActiveBasket(ctx, user.ID)
 	c.JSON(http.StatusOK, updatedBasket)
 }
 
@@ -136,6 +148,8 @@ func (h *Handler) AddItemToBasket(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/basket/items/{id} [delete]
 func (h *Handler) RemoveItemFromBasket(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	itemID, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		return
@@ -143,18 +157,19 @@ func (h *Handler) RemoveItemFromBasket(c *gin.Context) {
 
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
 
 	// Verify ownership (optional but good practice, though item ID is unique)
 	// For simplicity, just delete
-	if err := h.Repos.Baskets.RemoveItem(c.Request.Context(), itemID); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to remove item")
+	if err := h.Repos.Baskets.RemoveItem(ctx, itemID); err != nil {
+		logging.Error(ctx, "Failed to remove item from basket", err, "itemID", itemID)
+		helpers.HandleError(c, err, "Failed to remove item")
 		return
 	}
 
-	updatedBasket, _ := h.Repos.Baskets.GetActiveBasket(c.Request.Context(), user.ID)
+	updatedBasket, _ := h.Repos.Baskets.GetActiveBasket(ctx, user.ID)
 	c.JSON(http.StatusOK, updatedBasket)
 }
 
@@ -170,21 +185,25 @@ func (h *Handler) RemoveItemFromBasket(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/basket [delete]
 func (h *Handler) ClearBasket(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	user := helpers.GetUserFromContext(c)
 	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Authentication required"), "Authentication required")
 		return
 	}
 
-	basket, err := h.Repos.Baskets.GetActiveBasket(c.Request.Context(), user.ID)
+	basket, err := h.Repos.Baskets.GetActiveBasket(ctx, user.ID)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve basket")
+		logging.Error(ctx, "Failed to retrieve basket", err, "userID", user.ID)
+		helpers.HandleError(c, err, "Failed to retrieve basket")
 		return
 	}
 
 	if basket != nil {
-		if err := h.Repos.Baskets.ClearBasket(c.Request.Context(), basket.ID); err != nil {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to clear basket")
+		if err := h.Repos.Baskets.ClearBasket(ctx, basket.ID); err != nil {
+			logging.Error(ctx, "Failed to clear basket", err, "basketID", basket.ID)
+			helpers.HandleError(c, err, "Failed to clear basket")
 			return
 		}
 	}

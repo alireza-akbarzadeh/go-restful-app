@@ -42,13 +42,7 @@ func (h *Handler) CreateEvent(c *gin.Context) {
 
 	event.OwnerID = user.ID
 	createdEvent, err := h.Repos.Events.Insert(ctx, &event)
-	if err != nil {
-		logging.Error(ctx, "failed to create event", err, "name", event.Name, "owner_id", user.ID)
-		if appErr, ok := err.(*appErrors.AppError); ok {
-			helpers.RespondWithError(c, appErr.StatusCode, appErr.Message)
-		} else {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to create event")
-		}
+	if helpers.HandleError(c, err, "Failed to create event") {
 		return
 	}
 
@@ -79,13 +73,7 @@ func (h *Handler) GetEvent(c *gin.Context) {
 	logging.Debug(ctx, "retrieving event", "event_id", id)
 
 	event, err := h.Repos.Events.Get(ctx, id)
-	if err != nil {
-		logging.Error(ctx, "failed to retrieve event", err, "event_id", id)
-		if appErr, ok := err.(*appErrors.AppError); ok {
-			helpers.RespondWithError(c, appErr.StatusCode, appErr.Message)
-		} else {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
-		}
+	if helpers.HandleError(c, err, "Failed to retrieve event") {
 		return
 	}
 
@@ -123,13 +111,7 @@ func (h *Handler) GetAllEvents(c *gin.Context) {
 	}
 
 	events, paginationResp, err := h.Repos.Events.ListWithPagination(ctx, req)
-	if err != nil {
-		logging.Error(ctx, "failed to retrieve events", err)
-		if appErr, ok := err.(*appErrors.AppError); ok {
-			helpers.RespondWithError(c, appErr.StatusCode, appErr.Message)
-		} else {
-			helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve events")
-		}
+	if helpers.HandleError(c, err, "Failed to retrieve events") {
 		return
 	}
 
@@ -154,6 +136,8 @@ func (h *Handler) GetAllEvents(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id} [put]
 func (h *Handler) UpdateEvent(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	id, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
@@ -161,24 +145,21 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
+	logging.Debug(ctx, "updating event", "event_id", id, "user_id", user.ID)
+
 	// Check if event exists and user is the owner
-	existingEvent, err := h.Repos.Events.Get(c.Request.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
+	existingEvent, err := h.Repos.Events.Get(ctx, id)
+	if helpers.HandleError(c, err, "Failed to retrieve event") {
 		return
 	}
-	if existingEvent == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Event not found")
-		return
-	}
+
 	if existingEvent.OwnerID != user.ID {
-		helpers.RespondWithError(c, http.StatusForbidden, "You are not authorized to update this event")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrForbidden, "You are not authorized to update this event"), "")
 		return
 	}
 
@@ -192,11 +173,12 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 	updatedEvent.ID = id
 	updatedEvent.OwnerID = user.ID
 
-	if err := h.Repos.Events.Update(c.Request.Context(), &updatedEvent); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update event")
+	if err := h.Repos.Events.Update(ctx, &updatedEvent); err != nil {
+		helpers.HandleError(c, err, "Failed to update event")
 		return
 	}
 
+	logging.Info(ctx, "event updated successfully", "event_id", id, "name", updatedEvent.Name)
 	c.JSON(http.StatusOK, updatedEvent)
 }
 
@@ -216,6 +198,8 @@ func (h *Handler) UpdateEvent(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/events/{id} [delete]
 func (h *Handler) DeleteEvent(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	id, err := helpers.ParseIDParam(c, "id")
 	if err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, "Invalid event ID")
@@ -223,38 +207,36 @@ func (h *Handler) DeleteEvent(c *gin.Context) {
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
+	logging.Debug(ctx, "deleting event", "event_id", id, "user_id", user.ID)
+
 	// Check if event exists and user is the owner
-	existingEvent, err := h.Repos.Events.Get(c.Request.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve event")
+	existingEvent, err := h.Repos.Events.Get(ctx, id)
+	if helpers.HandleError(c, err, "Failed to retrieve event") {
 		return
 	}
-	if existingEvent == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "Event not found")
-		return
-	}
+
 	if existingEvent.OwnerID != user.ID {
-		helpers.RespondWithError(c, http.StatusForbidden, "You are not authorized to delete this event")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrForbidden, "You are not authorized to delete this event"), "")
 		return
 	}
 
 	// Delete all attendees first
-	if err := h.Repos.Attendees.DeleteByEvent(c.Request.Context(), id); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete event attendees")
+	if err := h.Repos.Attendees.DeleteByEvent(ctx, id); err != nil {
+		helpers.HandleError(c, err, "Failed to delete event attendees")
 		return
 	}
 
 	// Delete event
-	if err := h.Repos.Events.Delete(c.Request.Context(), id); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to delete event")
+	if err := h.Repos.Events.Delete(ctx, id); err != nil {
+		helpers.HandleError(c, err, "Failed to delete event")
 		return
 	}
 
+	logging.Info(ctx, "event deleted successfully", "event_id", id)
 	c.Status(http.StatusNoContent)
 }

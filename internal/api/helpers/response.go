@@ -3,14 +3,16 @@ package helpers
 import (
 	"net/http"
 
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
 	"github.com/alireza-akbarzadeh/ginflow/internal/pagination"
 	"github.com/gin-gonic/gin"
 )
 
 // ErrorResponse represents a standard error response
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error   string                 `json:"error"`
+	Message string                 `json:"message,omitempty"`
+	Details map[string]interface{} `json:"details,omitempty"`
 }
 
 // SuccessResponse represents a standard success response
@@ -25,6 +27,42 @@ func RespondWithError(c *gin.Context, code int, message string) {
 		Error:   http.StatusText(code),
 		Message: message,
 	})
+}
+
+// RespondWithAppError handles AppError types and sends appropriate response
+func RespondWithAppError(c *gin.Context, err error, fallbackMessage string) {
+	if appErr, ok := err.(*appErrors.AppError); ok {
+		response := ErrorResponse{
+			Error:   http.StatusText(appErr.StatusCode),
+			Message: appErr.Message,
+		}
+		if len(appErr.Details) > 0 {
+			response.Details = appErr.Details
+		}
+		c.JSON(appErr.StatusCode, response)
+		return
+	}
+	RespondWithError(c, http.StatusInternalServerError, fallbackMessage)
+}
+
+// HandleError is a convenience function that handles errors with proper type checking
+// It returns true if an error was handled (and response sent), false otherwise
+func HandleError(c *gin.Context, err error, fallbackMessage string) bool {
+	if err == nil {
+		return false
+	}
+	RespondWithAppError(c, err, fallbackMessage)
+	return true
+}
+
+// HandleNotFound sends a 404 response if the resource is nil
+// Returns true if not found (and response sent), false otherwise
+func HandleNotFound(c *gin.Context, resource interface{}, resourceName string) bool {
+	if resource == nil {
+		RespondWithError(c, http.StatusNotFound, resourceName+" not found")
+		return true
+	}
+	return false
 }
 
 // RespondWithSuccess sends a success response

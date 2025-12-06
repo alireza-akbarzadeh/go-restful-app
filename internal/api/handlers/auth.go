@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/alireza-akbarzadeh/ginflow/internal/api/helpers"
+	appErrors "github.com/alireza-akbarzadeh/ginflow/internal/errors"
+	"github.com/alireza-akbarzadeh/ginflow/internal/logging"
 	"github.com/alireza-akbarzadeh/ginflow/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -48,29 +50,33 @@ type UpdatePasswordRequest struct {
 // @Failure      401          {object}  helpers.ErrorResponse
 // @Failure      500          {object}  helpers.ErrorResponse
 // @Router       /api/v1/auth/login [post]
-
 func (h *Handler) Login(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	logging.Debug(ctx, "login attempt", "email", req.Email)
+
 	// Get user by email
-	user, err := h.Repos.Users.GetByEmail(c.Request.Context(), req.Email)
+	user, err := h.Repos.Users.GetByEmail(ctx, req.Email)
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Something went wrong")
-		return
-	}
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Invalid email or password")
+		// Check if it's a not found error - that's fine, just invalid credentials
+		if appErrors.IsType(err, appErrors.ErrNotFound) {
+			helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Invalid email or password"), "")
+			return
+		}
+		helpers.HandleError(c, err, "Something went wrong")
 		return
 	}
 
 	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Invalid email or password")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Invalid email or password"), "")
 		return
 	}
 
@@ -81,16 +87,18 @@ func (h *Handler) Login(c *gin.Context) {
 	})
 	tokenString, err := token.SignedString([]byte(h.JWTSecret))
 	if err != nil {
+		logging.Error(ctx, "failed to generate token", err, "user_id", user.ID)
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
 	// Update last login time
-	_ = h.Repos.Users.UpdateLastLogin(c.Request.Context(), user.ID)
+	_ = h.Repos.Users.UpdateLastLogin(ctx, user.ID)
 
 	// Don't expose password in response
 	user.Password = ""
 
+	logging.Info(ctx, "user logged in successfully", "user_id", user.ID, "email", user.Email)
 	c.JSON(http.StatusOK, LoginResponse{
 		Token: tokenString,
 		User:  user,
@@ -119,26 +127,31 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Failure      500   {object}  helpers.ErrorResponse
 // @Router       /api/v1/auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	logging.Debug(ctx, "registration attempt", "email", req.Email)
+
 	// Check if user already exists
-	existingUser, err := h.Repos.Users.GetByEmail(c.Request.Context(), req.Email)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to check existing user")
+	existingUser, err := h.Repos.Users.GetByEmail(ctx, req.Email)
+	if err != nil && !appErrors.IsType(err, appErrors.ErrNotFound) {
+		helpers.HandleError(c, err, "Failed to check existing user")
 		return
 	}
 	if existingUser != nil {
-		helpers.RespondWithError(c, http.StatusConflict, "User with this email already exists")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrAlreadyExists, "User with this email already exists"), "")
 		return
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		logging.Error(ctx, "failed to hash password", err)
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to register user")
 		return
 	}
@@ -150,15 +163,15 @@ func (h *Handler) Register(c *gin.Context) {
 		Name:     req.Name,
 	}
 
-	createdUser, err := h.Repos.Users.Insert(c.Request.Context(), user)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to register user")
+	createdUser, err := h.Repos.Users.Insert(ctx, user)
+	if helpers.HandleError(c, err, "Failed to register user") {
 		return
 	}
 
 	// Don't expose password in response
 	createdUser.Password = ""
 
+	logging.Info(ctx, "user registered successfully", "user_id", createdUser.ID, "email", createdUser.Email)
 	c.JSON(http.StatusCreated, createdUser)
 }
 
@@ -176,6 +189,8 @@ func (h *Handler) Register(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /api/v1/auth/password [put]
 func (h *Handler) UpdatePassword(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helpers.RespondWithError(c, http.StatusBadRequest, err.Error())
@@ -183,42 +198,40 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	}
 
 	// Get authenticated user
-	user := helpers.GetUserFromContext(c)
-	if user == nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Unauthorized")
+	user, ok := helpers.GetAuthenticatedUser(c)
+	if !ok {
 		return
 	}
 
+	logging.Debug(ctx, "password update attempt", "user_id", user.ID)
+
 	// Get fresh user data to verify old password
-	dbUser, err := h.Repos.Users.Get(c.Request.Context(), user.ID)
-	if err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to retrieve user")
-		return
-	}
-	if dbUser == nil {
-		helpers.RespondWithError(c, http.StatusNotFound, "User not found")
+	dbUser, err := h.Repos.Users.Get(ctx, user.ID)
+	if helpers.HandleError(c, err, "Failed to retrieve user") {
 		return
 	}
 
 	// Verify old password
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.OldPassword))
 	if err != nil {
-		helpers.RespondWithError(c, http.StatusUnauthorized, "Invalid old password")
+		helpers.RespondWithAppError(c, appErrors.New(appErrors.ErrUnauthorized, "Invalid old password"), "")
 		return
 	}
 
 	// Hash new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
+		logging.Error(ctx, "failed to hash new password", err, "user_id", user.ID)
 		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to hash password")
 		return
 	}
 
 	// Update password
-	if err := h.Repos.Users.UpdatePassword(c.Request.Context(), user.ID, string(hashedPassword)); err != nil {
-		helpers.RespondWithError(c, http.StatusInternalServerError, "Failed to update password")
+	if err := h.Repos.Users.UpdatePassword(ctx, user.ID, string(hashedPassword)); err != nil {
+		helpers.HandleError(c, err, "Failed to update password")
 		return
 	}
 
+	logging.Info(ctx, "password updated successfully", "user_id", user.ID)
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
