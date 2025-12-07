@@ -1,14 +1,23 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alireza-akbarzadeh/ginflow/cmd/web"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// setupTestRouter creates a router with embedded templates for testing
+func setupTestRouter() *gin.Engine {
+	router := gin.New()
+	router.SetHTMLTemplate(template.Must(template.ParseFS(web.Templates, "pages/*.html")))
+	return router
+}
 
 // ============================================================================
 // Web Handler Tests
@@ -29,8 +38,7 @@ func TestShowLandingPage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &Handler{}
 
-			router := gin.New()
-			router.LoadHTMLGlob("../../web/pages/*.html")
+			router := setupTestRouter()
 			router.GET("/", handler.ShowLandingPage)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -75,8 +83,7 @@ func TestShowHealthPage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &Handler{}
 
-			router := gin.New()
-			router.LoadHTMLGlob("../../web/pages/*.html")
+			router := setupTestRouter()
 			router.GET("/health", handler.ShowHealthPage)
 
 			req := httptest.NewRequest(http.MethodGet, "/health", nil)
@@ -113,8 +120,7 @@ func TestShowDashboardPage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &Handler{}
 
-			router := gin.New()
-			router.LoadHTMLGlob("../../web/pages/*.html")
+			router := setupTestRouter()
 			router.GET("/dashboard", handler.ShowDashboardPage)
 
 			req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
@@ -174,8 +180,7 @@ func TestContentTypeNegotiation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &Handler{}
 
-			router := gin.New()
-			router.LoadHTMLGlob("../../web/pages/*.html")
+			router := setupTestRouter()
 			router.GET("/health", handler.ShowHealthPage)
 
 			req := httptest.NewRequest(http.MethodGet, tt.endpoint, nil)
@@ -196,8 +201,7 @@ func TestContentTypeNegotiation(t *testing.T) {
 func TestWebPagesIntegration(t *testing.T) {
 	handler := &Handler{}
 
-	router := gin.New()
-	router.LoadHTMLGlob("../../web/pages/*.html")
+	router := setupTestRouter()
 
 	// Register all web routes
 	router.GET("/", handler.ShowLandingPage)
@@ -235,8 +239,7 @@ func TestWebPagesIntegration(t *testing.T) {
 func TestHTTPMethods(t *testing.T) {
 	handler := &Handler{}
 
-	router := gin.New()
-	router.LoadHTMLGlob("../../web/pages/*.html")
+	router := setupTestRouter()
 	router.GET("/", handler.ShowLandingPage)
 
 	tests := []struct {
@@ -269,8 +272,7 @@ func TestHTTPMethods(t *testing.T) {
 func TestResponseHeaders(t *testing.T) {
 	handler := &Handler{}
 
-	router := gin.New()
-	router.LoadHTMLGlob("../../web/pages/*.html")
+	router := setupTestRouter()
 	router.GET("/", handler.ShowLandingPage)
 	router.GET("/health", handler.ShowHealthPage)
 
@@ -318,8 +320,7 @@ func TestPageNotFound(t *testing.T) {
 func BenchmarkShowLandingPage(b *testing.B) {
 	handler := &Handler{}
 
-	router := gin.New()
-	router.LoadHTMLGlob("../../web/pages/*.html")
+	router := setupTestRouter()
 	router.GET("/", handler.ShowLandingPage)
 
 	b.ResetTimer()
@@ -364,8 +365,7 @@ func TestAllWebPages(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page.name, func(t *testing.T) {
-			router := gin.New()
-			router.LoadHTMLGlob("../../web/pages/*.html")
+			router := setupTestRouter()
 			router.GET(page.path, page.handlerFunc)
 
 			req := httptest.NewRequest(http.MethodGet, page.path, nil)
