@@ -26,6 +26,11 @@ var (
 	Logger *slog.Logger
 )
 
+// init automatically initializes the logger when the package is imported
+func init() {
+	InitLogger()
+}
+
 // InitLogger initializes the global logger
 func InitLogger() {
 	opts := &slog.HandlerOptions{
@@ -79,6 +84,11 @@ func GetUserID(ctx context.Context) int {
 // LogWithContext creates a logger with context values
 func LogWithContext(ctx context.Context) *slog.Logger {
 	logger := Logger
+
+	// If Logger is not initialized, use the default slog logger
+	if logger == nil {
+		logger = slog.Default()
+	}
 
 	if requestID := GetRequestID(ctx); requestID != "" {
 		logger = logger.With("request_id", requestID)

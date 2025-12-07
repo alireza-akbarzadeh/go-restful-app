@@ -1,6 +1,10 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"os"
+
+	"github.com/gin-gonic/gin"
+)
 
 // SecurityHeaders adds common security headers to responses
 func SecurityHeaders() gin.HandlerFunc {
@@ -13,10 +17,23 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		// Controls how much referrer information is included with requests
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		// Enforces HTTPS (HSTS) - 1 year
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		// Content Security Policy - allows Tailwind CDN, AlpineJS, Google Fonts, Font Awesome
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self'")
+
+		// Only add HSTS in production (when using HTTPS)
+		if os.Getenv("GIN_MODE") == "release" {
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
+		// Content Security Policy
+		// - Allow scripts from CDNs (Tailwind, Alpine)
+		// - Allow styles from Google Fonts and Font Awesome
+		// - Allow connections to self and any HTTPS endpoint (for API calls)
+		csp := "default-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
+			"img-src 'self' data: https:; " +
+			"font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+			"connect-src 'self' http://localhost:* ws://localhost:* https:;"
+		c.Header("Content-Security-Policy", csp)
 
 		c.Next()
 	}

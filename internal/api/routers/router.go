@@ -57,6 +57,9 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo interface
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
+		// API Info endpoint at the base route
+		v1.GET("", handler.GetAPIInfo)
+
 		// Auth Routes
 		SetupAuthRoutes(v1, handler)
 
