@@ -40,6 +40,18 @@ func (a *App) Run() error {
 
 // printStartupBanner prints the server startup information
 func (a *App) printStartupBanner() {
+	// ASCII art for GINFLOW
+	banner := `
+   _____ _____ _   _ ______ _      ______          __
+  / ____|_   _| \ | |  ____| |    / __ \ \        / /
+ | |  __  | | |  \| | |__  | |   | |  | \ \  /\  / / 
+ | | |_ | | | | . ` + "`" + ` |  __| | |   | |  | |\ \/  \/ /  
+ | |__| |_| |_| |\  | |    | |___| |__| | \  /\  /   
+  \_____|_____|_| \_|_|    |______\____/   \/  \/    
+                                                     `
+
+	fmt.Println("\033[36m" + banner + "\033[0m") // Cyan color
+
 	a.console.Line()
 	a.console.Divider()
 	a.console.Success("🚀", fmt.Sprintf("Server running on port %d", a.config.Port))
