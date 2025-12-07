@@ -2,8 +2,14 @@
 # This file contains common commands to manage your project
 
 # Variables
-BINARY_NAME=api-server
+BINARY_NAME=ginflow
 MAIN_PATH=./cmd/server
+
+# Version info (can be overridden during build)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+LDFLAGS=-ldflags "-X github.com/alireza-akbarzadeh/ginflow/cmd/cli.Version=$(VERSION) -X github.com/alireza-akbarzadeh/ginflow/cmd/cli.GitCommit=$(GIT_COMMIT) -X github.com/alireza-akbarzadeh/ginflow/cmd/cli.BuildTime=$(BUILD_TIME)"
 
 # Go parameters
 GOCMD=go
@@ -21,7 +27,7 @@ YELLOW=\033[0;33m
 RED=\033[0;31m
 NC=\033[0m # No Color
 
-.PHONY: all build clean test coverage deps run dev docker-build docker-run help migrate reset-db
+.PHONY: all build clean test coverage deps run dev docker-build docker-run help migrate reset-db version
 
 # Default target
 all: deps build
@@ -37,12 +43,15 @@ help:
 	@echo "$(YELLOW)Database:$(NC)"
 	@echo "  make migrate       - Run database migrations"
 	@echo "  make reset-db      - Reset database (drop all tables and re-migrate)"
+	@echo "  make drop-db       - Drop all database tables"
+	@echo "  make db-status     - Check database connection status"
 	@echo ""
 	@echo "$(YELLOW)Development:$(NC)"
-	@echo "  make run           - Run the application"
+	@echo "  make run           - Run the application (ginflow serve)"
 	@echo "  make dev           - Run with hot reload (requires air)"
 	@echo "  make build         - Build the application binary"
 	@echo "  make clean         - Remove build artifacts and temporary files"
+	@echo "  make version       - Show version information"
 	@echo ""
 	@echo "$(YELLOW)Code Quality:$(NC)"
 	@echo "  make test          - Run tests"
@@ -59,14 +68,23 @@ help:
 	@echo ""
 
 ## migrate: Run database migrations
-migrate:
+migrate: build
 	@echo "$(GREEN)Running database migrations...$(NC)"
-	$(GOCMD) run ./cmd/migrate
+	./bin/$(BINARY_NAME) migrate
 
 ## reset-db: Reset database (drop all and re-migrate)
-reset-db:
+reset-db: build
 	@echo "$(YELLOW)Resetting database...$(NC)"
-	$(GOCMD) run ./cmd/reset-db
+	./bin/$(BINARY_NAME) db reset --force
+
+## drop-db: Drop all database tables
+drop-db: build
+	@echo "$(RED)Dropping all database tables...$(NC)"
+	./bin/$(BINARY_NAME) db drop --force
+
+## db-status: Check database connection status
+db-status: build
+	./bin/$(BINARY_NAME) db status
 
 ## deps: Download and verify dependencies
 deps:
@@ -87,13 +105,17 @@ install-tools:
 ## build: Build the application binary
 build:
 	@echo "$(GREEN)Building application...$(NC)"
-	$(GOBUILD) -o bin/$(BINARY_NAME) -v $(MAIN_PATH)
+	$(GOBUILD) $(LDFLAGS) -o bin/$(BINARY_NAME) -v $(MAIN_PATH)
 	@echo "$(GREEN)✓ Build complete! Binary: bin/$(BINARY_NAME)$(NC)"
 
 ## run: Run the application
 run: build
 	@echo "$(GREEN)Starting application...$(NC)"
-	./bin/$(BINARY_NAME)
+	./bin/$(BINARY_NAME) serve
+
+## version: Show version information
+version: build
+	./bin/$(BINARY_NAME) version
 
 ## dev: Run with hot reload using air
 dev:

@@ -4,6 +4,8 @@ A modern RESTful API framework built with Go and Gin for managing events and att
 
 ## 📋 Table of Contents
 
+
+
 - [Features](#features)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
