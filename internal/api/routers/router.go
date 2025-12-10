@@ -16,31 +16,17 @@ import (
 
 // SetupRouter configures and returns the main router
 func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo interfaces.UserRepositoryInterface) *gin.Engine {
-	// Use gin.New() instead of Default() to use custom logger
 	router := gin.New()
 
-	// Add Recovery middleware to recover from panics
 	router.Use(gin.Recovery())
-
-	// Add Structured Logger middleware (includes pretty JSON in dev mode)
 	router.Use(middleware.Logger())
-
-	// Apply rate limiting middleware globally
-	// 20 requests per second with a burst of 50
 	router.Use(middleware.RateLimitMiddleware(rate.Limit(constants.DEFAULT_RATE_LIMIT), constants.DEFAULT_RATE_BURST))
-
-	// Apply CORS middleware to allow requests from frontend
 	router.Use(middleware.CORS([]string{"*"}))
-
-	// Apply security headers middleware
 	router.Use(middleware.SecurityHeaders())
-
 	router.SetHTMLTemplate(template.Must(template.ParseFS(web.Templates, "components/*.html", "pages/*.html")))
 
-	// Root landing page
 	router.GET("/", handler.ShowLandingPage)
 
-	// Setup Swagger documentation
 	router.GET("/swagger/*any", func(c *gin.Context) {
 		if c.Request.RequestURI == "/swagger/" {
 			c.Redirect(302, "/swagger/index.html")
@@ -48,10 +34,8 @@ func SetupRouter(handler *handlers.Handler, jwtSecret string, userRepo interface
 		ginSwagger.WrapHandler(swaggerFiles.Handler)(c)
 	})
 
-	// Health check endpoint
 	router.GET("/health", handler.ShowHealthPage)
 
-	// Dashboard endpoint
 	router.GET("/dashboard", handler.ShowDashboardPage)
 
 	// API v1 routes

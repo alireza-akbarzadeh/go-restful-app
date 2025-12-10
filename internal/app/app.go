@@ -35,16 +35,13 @@ func New(opts ...Option) (*App, error) {
 		console: console.New(),
 	}
 
-	// Apply functional options
 	for _, opt := range opts {
 		opt(app)
 	}
 
-	// Setup structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// Initialize all components
 	if err := app.initialize(); err != nil {
 		return nil, err
 	}
@@ -118,7 +115,7 @@ func (a *App) Config() *Config {
 	return a.config
 }
 
-// Repos returns the repository models
+// Repos return the repository models
 func (a *App) Repos() *repository.Models {
 	return a.repos
 }

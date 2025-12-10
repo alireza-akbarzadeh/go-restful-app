@@ -50,7 +50,7 @@ func (i *IPRateLimiter) AddIP(ip string) *rate.Limiter {
 }
 
 // GetLimiter returns the rate limiter for the provided IP address if it exists.
-// Otherwise calls AddIP to add IP to the map
+// Otherwise, calls AddIP to add IP to the map
 func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 	i.mu.Lock()
 	limiter, exists := i.ips[ip]
@@ -81,7 +81,7 @@ func (i *IPRateLimiter) cleanup() {
 	}
 }
 
-// RateLimitMiddleware creates a middleware for rate limiting based on IP
+// RateLimitMiddleware creates middleware for rate limiting based on IP
 func RateLimitMiddleware(limit rate.Limit, burst int) gin.HandlerFunc {
 	limiter := NewIPRateLimiter(limit, burst)
 	return func(c *gin.Context) {
