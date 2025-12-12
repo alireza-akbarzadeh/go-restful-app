@@ -1,21 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js removed, using htmx for interactivity -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
-</head>
-<body class="bg-gray-100 font-sans">
-
+{{ define "title" }}API Dashboard{{ end }}
+{{ define "body" }}
     {{ template "auth" . }}
-
     <!-- Main Dashboard (htmx version) -->
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
@@ -66,8 +51,7 @@
             </main>
         </div>
     </div>
-
-    <!-- Create Event Modal -->
+    <!-- Create Event Modal (to be migrated to htmx) -->
     <div x-show="showCreateEventModal" x-cloak class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h3 class="text-xl font-bold mb-4 text-gray-800">Create New Event</h3>
@@ -95,7 +79,5 @@
             </form>
         </div>
     </div>
-
-    <!-- All Alpine.js logic removed. Use htmx for interactivity. -->
-</body>
-</html>
+{{ end }}
+{{ template "RootLayout" . }}
