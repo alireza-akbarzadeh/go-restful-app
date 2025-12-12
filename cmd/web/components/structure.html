@@ -1,5 +1,5 @@
 {{ define "structure" }}
-    <!-- Project Structure Section -->
+    <!-- Project Structure Section (htmx demo) -->
     <section id="structure" class="py-24 bg-slate-50 relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
@@ -9,7 +9,18 @@
                     <p class="text-lg text-slate-600 mb-8 leading-relaxed">
                         The project follows standard Go project layout guidelines, ensuring maintainability and scalability.
                     </p>
-                    
+                    <!-- htmx demo: load project structure from /api/v1/structure -->
+                    <button 
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+                        hx-get="/api/v1/structure"
+                        hx-target="#project-structure-htmx"
+                        hx-swap="innerHTML"
+                    >
+                        Load Project Structure (htmx)
+                    </button>
+                    <div id="project-structure-htmx" class="mt-4 text-sm text-slate-700">
+                        <!-- Project structure will be loaded here by htmx -->
+                    </div>
                     <div class="space-y-6">
                         <div class="flex gap-4">
                             <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">

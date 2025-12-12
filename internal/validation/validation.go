@@ -15,10 +15,15 @@ var (
 func init() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		validate = v
-
 		// Register custom validators
-		validate.RegisterValidation("slug", validateSlug)
-		validate.RegisterValidation("strong_password", validateStrongPassword)
+		err := validate.RegisterValidation("slug", validateSlug)
+		if err != nil {
+			return
+		}
+		err = validate.RegisterValidation("strong_password", validateStrongPassword)
+		if err != nil {
+			return
+		}
 
 		// Register custom tag name func
 		validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -82,16 +87,16 @@ func validateStrongPassword(fl validator.FieldLevel) bool {
 	return hasUpper && hasLower && hasNumber && hasSpecial
 }
 
-// ValidationError represents a structured validation error
-type ValidationError struct {
+// Error represents a structured validation error
+type Error struct {
 	Field   string `json:"field"`
 	Value   string `json:"value"`
 	Message string `json:"message"`
 }
 
 // FormatValidationErrors formats validator errors into a user-friendly format
-func FormatValidationErrors(err error) []ValidationError {
-	var errors []ValidationError
+func FormatValidationErrors(err error) []Error {
+	var errors []Error
 
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, err := range validationErrors {
@@ -99,7 +104,7 @@ func FormatValidationErrors(err error) []ValidationError {
 			value := err.Value().(string)
 			message := getValidationMessage(err.Tag(), err.Param())
 
-			errors = append(errors, ValidationError{
+			errors = append(errors, Error{
 				Field:   field,
 				Value:   value,
 				Message: message,
